@@ -27,3 +27,9 @@ TOP_K_RESULTS = 3
 # Cover letter settings
 MAX_WORDS = 500
 CANDIDATE_NAME = "Muhammad Cikal Merdeka"
+
+# Contact Links
+RESUME_AI_LINK = "https://drive.google.com/file/d/1ie89a22v7E1iMEglhj9KXBgu72YSq2K2/view?usp=sharing"
+RESUME_DATA_LINK = "https://drive.google.com/file/d/14vDbB6alxpNIlo266OStm0lHaqusHsxc/view?usp=sharing"
+GITHUB_LINK = "https://github.com/mcikalmerdeka"
+WEBSITE_LINK = "https://mcikalmerdeka.vercel.app/"

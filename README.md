@@ -21,6 +21,14 @@ An intelligent tool that helps you throughout your job application process. Appl
 - **Practice Mode**: Includes example questions to help you prepare for interviews
 - **Persistent Chat**: Clear and restart conversations as needed
 
+### 📨 Cold Message Generator
+
+- **LinkedIn/Email Outreach**: Create concise, professional cold messages to reach out to hiring managers or technical contacts
+- **Contact-Specific**: Enter the contact person's name and position for personalized messaging
+- **Auto-Link Integration**: Automatically includes your resume, GitHub, and personal website links
+- **Short & Impactful**: Generates 150-200 word messages optimized for busy professionals
+- **TXT Export**: Save messages for easy copy-paste into LinkedIn, email, or other platforms
+
 ### 🎨 User Interface
 
 - **Setup-First Workflow**: Centralized Setup section for selecting resume type and entering job details (shared across all features)
@@ -80,6 +88,25 @@ An intelligent tool that helps you throughout your job application process. Appl
     - Real-time chat interface with employers/recruiters
     - Example questions to practice your responses
     - Easy conversation management (clear, save)
+
+### Cold Message Generator
+
+1. **Contact Information**:
+    - Enter the contact person's name and position (e.g., HR Manager, Tech Lead)
+    - The position helps tailor the message tone (formal for HR, technical for engineers)
+
+2. **Message Generation**:
+    - Retrieves relevant skills and experiences from your resume
+    - Creates a concise 150-200 word message highlighting your fit for the role
+    - Automatically includes your resume link (AI or Data version based on selection)
+    - Adds GitHub and personal website links at the end
+
+3. **Professional Formatting**:
+    - Generates a friendly yet professional greeting
+    - Clearly states your interest in the position
+    - Highlights 2-3 relevant skills that match the job requirements
+    - Includes a clear call-to-action for next steps
+    - Formatted for easy copy-paste into LinkedIn messages or emails
 
 ## 📋 Requirements
 
@@ -164,6 +191,19 @@ After completing Setup:
    - Use "🗑️ Clear Chat" to start a new conversation
    - Review your chat history for reference
 
+#### Tab 3: 📨 Message to Contact
+
+After completing Setup:
+
+1. **Enter Contact Details**:
+   - Contact Name: The person you're reaching out to (e.g., "Sarah Johnson")
+   - Contact Position: Their role (e.g., "HR Manager", "Tech Lead", "Engineering Manager")
+2. **Generate Message**: Click "✨ Generate Cold Message" to create your outreach message
+3. **Use the Message**:
+   - Copy the generated message directly from the output
+   - Or download the TXT file
+   - Paste into LinkedIn, email, or other messaging platforms
+
 ### Example Use Cases
 
 **Cover Letter Generation**:
@@ -202,7 +242,40 @@ file_path = generator.save_cover_letter(
 )
 ```
 
-**Employer Q&A Chatbot**:
+**Cold Message Generator**:
+
+```python
+from src.core.generator import CoverLetterGenerator
+from src.core.vector_store import VectorStoreManager
+
+# Initialize components
+generator = CoverLetterGenerator()
+vector_store = VectorStoreManager()
+
+# Load and index resume
+vector_store.load_and_index_resume("data/resumes/ai_engineer_resume.pdf")
+vector_store.save_vector_store("data/vector_stores/ai_engineer")
+
+# Assign to generator
+generator.vector_store_manager = vector_store
+
+# Generate cold message
+cold_message = generator.generate_cold_message(
+    job_description="Your job description here...",
+    company_name="Company Name",
+    job_title="Position Title",
+    contact_name="John Smith",
+    contact_position="Tech Lead",
+    resume_type="AI Engineer"
+)
+
+# Save output
+file_path = generator.save_cold_message(
+    cold_message,
+    contact_name="John Smith",
+    company_name="Company Name"
+)
+```
 
 ```python
 from src.core.chatbot import EmployerQAChatbot
@@ -232,7 +305,7 @@ print(response)
 │   │   ├── logging_config.py      # Centralized logging setup
 │   │   └── prompts.py             # LLM prompt templates (cover letter + Q&A)
 │   ├── core/
-│   │   ├── generator.py           # Cover letter generation logic
+│   │   ├── generator.py           # Cover letter and cold message generation logic
 │   │   ├── chatbot.py             # Employer Q&A chatbot handler
 │   │   └── vector_store.py        # FAISS vector store management
 │   └── ui/

@@ -184,3 +184,117 @@ def get_employer_qa_prompt(context: str, question: str) -> str:
 
 **Your Response:**
 Please provide a helpful, professional answer to the employer's question based on the resume context above."""
+
+
+# Cold Message / Outreach Message Prompt
+COLD_MESSAGE_TEMPLATE = """You are an expert at writing concise, engaging cold messages and LinkedIn connection requests for job seekers in technical fields.
+
+Your task is to create a professional cold message following the EXACT format and style of the templates below, adapted to the specific job and resume context.
+
+**Resume Context:**
+{context}
+
+**Job Context:**
+- Position: {job_title} at {company_name}
+- Recipient: {contact_name} ({contact_position})
+
+**Links to Include:**
+- Resume: {resume_link}
+- GitHub: {github_link}
+- Personal Website: {website_link}
+
+**TEMPLATE FOR AI ENGINEERING ROLES:**
+```
+Hey [Contact Person], saw [Company Name] is hiring for [Position Name].
+
+Noticed you're looking for someone with experience in [mention 1-2 key requirements from the job post]. I've been doing exactly that — currently building production RAG systems and agentic AI pipelines at 80&Company, where I brought document extraction accuracy from 58% to 100% for an automotive client. Stack includes LangChain, FastAPI, Next.js, PostgreSQL, and more.
+
+Already applied through the portal, but wanted to reach out directly in case it helps move things along. Dropping my links here so you can have a closer look.
+
+[Resume](https://...) | [GitHub](https://...) | [Website](https://...)
+
+Let me know your thoughts. Thanks!
+
+Best regards,
+Muhammad Cikal Merdeka
+```
+
+**TEMPLATE FOR DATA ROLES:**
+```
+Hey [Contact Person], saw [Company Name] is hiring for [Position Name].
+
+Noticed you're looking for someone with experience in [mention 1-2 key requirements from the job post]. That's pretty much what I've been doing — at Evermos I automated reconciliation for millions of monthly transactions using Python, SQL, and Snowflake, resolving 95% of cross-system discrepancies. I've also built dashboards in Looker Studio, Power BI, and Preset, and worked across dbt and Airflow for analytics engineering.
+
+Already applied through the portal, but wanted to reach out directly in case it helps. Dropping my links here so you can have a closer look.
+
+[Resume](https://...) | [GitHub](https://...) | [Website](https://...)
+
+Let me know your thoughts. Thanks!
+
+Best regards,
+Muhammad Cikal Merdeka
+```
+
+**STRICT INSTRUCTIONS - FOLLOW EXACTLY:**
+
+1. **Opening (Line 1)**: "Hey [contact_name], saw [company_name] is hiring for [job_title]."
+   - Use the exact recipient name and company from the inputs
+
+2. **Key Requirements Hook (Line 3)**: "Noticed you're looking for someone with experience in [extract 1-2 key requirements from job_description]."
+   - Analyze the job description and identify 1-2 most important technical requirements
+
+3. **Experience Paragraph (Line 4)**: 
+   - For AI roles: Start with "I've been doing exactly that —" then mention specific achievements from resume context (production systems, specific metrics like "58% to 100%", tech stack)
+   - For Data roles: Start with "That's pretty much what I've been doing —" then mention data engineering/analytics achievements (Python, SQL, specific tools, metrics like "millions of transactions", "95% resolved")
+   - Include specific company names, metrics, and tech stack from the resume context
+   - Keep it to ONE compelling paragraph highlighting the most relevant experience
+
+4. **Applied Line**: "Already applied through the portal, but wanted to reach out directly in case it helps move things along."
+   - Use this exact line (or "in case it helps." for data roles)
+
+5. **Links Line**: "Dropping my links here so you can have a closer look."
+   - Use this exact line
+
+6. **Links Format (separate line)**: 
+   Format as markdown hyperlinks: "[Resume]({resume_link}) | [GitHub]({github_link}) | [Website]({website_link})"
+   - Make them clickable links
+   - Use the exact URLs provided in the context
+
+7. **Closing**: "Let me know your thoughts. Thanks!"
+   - Use this exact line
+
+8. **Sign-off**: "Best regards," on one line, then "Muhammad Cikal Merdeka" on the next line
+
+**TONE GUIDELINES:**
+- Professional but conversational (not overly formal)
+- Confident but humble
+- Direct and to-the-point (busy hiring managers appreciate brevity)
+- Show enthusiasm without being desperate
+
+**CRITICAL:**
+- Keep total length to 150-200 words
+- Use specific achievements and metrics from the resume context (don't make up numbers)
+- Only mention technologies/tools actually listed in the resume
+- The message should read like a real human reaching out, not AI-generated
+
+Generate the complete cold message NOW:"""
+
+
+def get_cold_message_prompt(candidate_name: str, resume_link: str, github_link: str, 
+                           website_link: str) -> str:
+    """
+    Get the cold message generation prompt template.
+    
+    Args:
+        candidate_name: Full name of the candidate
+        resume_link: Link to the resume
+        github_link: Link to GitHub profile
+        website_link: Link to personal website
+    
+    Returns:
+        Formatted prompt template with candidate info pre-filled
+    """
+    return COLD_MESSAGE_TEMPLATE.replace("{candidate_name}", candidate_name).replace(
+        "{resume_link}", resume_link).replace(
+        "{github_link}", github_link).replace(
+        "{website_link}", website_link)

@@ -152,6 +152,56 @@ class ApplyCopilotUI:
             logger.error(error_msg)
             return "", None, error_msg
     
+    def generate_cold_message(self, contact_name: str, contact_position: str) -> tuple:
+        """
+        Generate a cold message using shared job details and contact info.
+        
+        Args:
+            contact_name: Name of the contact person
+            contact_position: Position/title of the contact person
+        
+        Returns:
+            Tuple of (cold message text, file path, status message)
+        """
+        try:
+            # Validate inputs
+            if not self.job_details["company_name"] or not self.job_details["job_title"] or not self.job_details["job_description"]:
+                return "", None, "❌ Please fill in all job details in the Setup section"
+            
+            if self.current_resume_type is None:
+                return "", None, "❌ Please index a resume first in the Setup section"
+            
+            if not contact_name or not contact_position:
+                return "", None, "❌ Please enter both contact name and position"
+            
+            # Generate cold message
+            logger.info(f"Generating cold message for {contact_name} ({contact_position}) at {self.job_details['company_name']}")
+            cold_message = self.generator.generate_cold_message(
+                job_description=self.job_details["job_description"],
+                company_name=self.job_details["company_name"],
+                job_title=self.job_details["job_title"],
+                contact_name=contact_name,
+                contact_position=contact_position,
+                resume_type=self.current_resume_type
+            )
+            
+            # Save cold message
+            file_path = self.generator.save_cold_message(
+                cold_message=cold_message,
+                contact_name=contact_name,
+                company_name=self.job_details["company_name"]
+            )
+            
+            success_msg = f"✅ Cold message generated and saved to: {file_path}"
+            logger.info(success_msg)
+            
+            return cold_message, file_path, success_msg
+            
+        except Exception as e:
+            error_msg = f"❌ Error generating cold message: {str(e)}"
+            logger.error(error_msg)
+            return "", None, error_msg
+    
     def create_setup_section(self) -> gr.Row:
         """Create the shared Setup section with Resume selection and Job Details."""
         with gr.Row() as setup_row:
@@ -377,6 +427,58 @@ class ApplyCopilotUI:
         
         return tab
     
+    def create_cold_message_tab(self) -> gr.Tab:
+        """Create the Cold Message / Outreach tab."""
+        with gr.Tab("📨 Message to Contact", id="cold_message") as tab:
+            gr.Markdown(f"## Generate a cold message to reach out to hiring managers or technical contacts")
+            gr.Markdown(
+                "Create a concise, professional cold message or LinkedIn connection request. "
+                "The message will include links to your resume, GitHub, and personal website."
+            )
+            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 👤 Contact Information")
+                    
+                    contact_name = gr.Textbox(
+                        label="Contact Name",
+                        placeholder="e.g., John Doe",
+                        info="Name of the person you're reaching out to"
+                    )
+                    
+                    contact_position = gr.Textbox(
+                        label="Contact Position",
+                        placeholder="e.g., HR Manager, Tech Lead, Engineering Manager",
+                        info="Their role (helps tailor the message tone)"
+                    )
+                    
+                    generate_btn = gr.Button("✨ Generate Cold Message", variant="primary")
+            
+            gr.Markdown("---")
+            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 📄 Generated Cold Message")
+                    generation_status = gr.Textbox(label="Generation Status", interactive=False)
+                    
+                    cold_message_output = gr.Textbox(
+                        label="Cold Message",
+                        lines=10,
+                        interactive=False,
+                        info="Copy this message to send via LinkedIn, email, or other platforms"
+                    )
+                    
+                    file_output = gr.File(label="Download Message (TXT)")
+            
+            # Event handlers
+            generate_btn.click(
+                fn=self.generate_cold_message,
+                inputs=[contact_name, contact_position],
+                outputs=[cold_message_output, file_output, generation_status]
+            )
+        
+        return tab
+    
     def create_interface(self) -> gr.Blocks:
         """Create and return the Gradio interface with shared setup and tabs."""
         
@@ -390,7 +492,7 @@ class ApplyCopilotUI:
             # Setup Section (Shared across all features)
             with gr.Column():
                 gr.Markdown("## 🔧 Setup")
-                gr.Markdown("*Complete these steps first. Your selections will be shared across all features.*")
+                gr.Markdown("*Complete these steps first. Your selections will be shared across all features (Cover Letter Generator, Employer Q&A, and Cold Message).")
                 self.create_setup_section()
             
             gr.Markdown("---")
@@ -400,6 +502,7 @@ class ApplyCopilotUI:
             with gr.Tabs():
                 self.create_cover_letter_tab()
                 self.create_employer_qa_tab()
+                self.create_cold_message_tab()
             
             gr.Markdown("---")
             gr.Markdown(
