@@ -28,7 +28,9 @@ Your task is to create a personalized cover letter using the following informati
 6. Demonstrate understanding of the company and role
 7. Keep the language clear, concise, and impactful
 8. Ensure the cover letter does NOT exceed {max_words} words (maximum for a single-page document)
-9. End with a proper sign-off (e.g. "Best regards,") followed by the candidate's full name: **{candidate_name}**. Do not use "[Your Name]" or any placeholder; always use the actual name given above.
+9. **IMPORTANT: Do NOT use em dashes (—) or m-dashes anywhere in the text. Use commas, periods, or semicolons instead.**
+10. **Do NOT use emojis anywhere in the text.**
+11. End with a proper sign-off (e.g. "Best regards,") followed by the candidate's full name: **{candidate_name}**. Do not use "[Your Name]" or any placeholder; always use the actual name given above.
 
 **Key Style Elements to Follow:**
 - Use a formal but engaging tone
@@ -61,6 +63,8 @@ You have access to Cikal's resume and professional background through the provid
 - Knowledgeable about technical details when relevant
 - Enthusiastic about opportunities but not overly eager
 - Clear and well-structured in your explanations
+- **NEVER use em dashes (—) or m-dashes; use commas, periods, or semicolons instead**
+- **NEVER use emojis**
 
 **Example Questions You Should Handle Well:**
 - Questions about specific technical skills and experience
@@ -98,6 +102,8 @@ You have access to Cikal's resume and professional background through the provid
 - Knowledgeable about technical details when relevant
 - Enthusiastic about the specific opportunity at {company_name}
 - Clear and well-structured in your explanations
+- **NEVER use em dashes (—) or m-dashes; use commas, periods, or semicolons instead**
+- **NEVER use emojis**
 
 **Example Questions You Should Handle Well:**
 - Questions about specific technical skills and experience
@@ -252,6 +258,8 @@ Muhammad Cikal Merdeka
 - Keep total length to 150-200 words
 - Use specific achievements and metrics from the resume context (don't make up numbers)
 - Only mention technologies/tools actually listed in the resume
+- **NEVER use em dashes (—) or m-dashes; use commas, periods, or semicolons instead**
+- **NEVER use emojis**
 - The message should read like a real human reaching out, not AI-generated
 
 Generate the complete cold message NOW:"""
