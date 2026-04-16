@@ -18,6 +18,8 @@ pinned: false
 
 An intelligent tool that helps you throughout your job application process. ApplyCopilot creates tailored cover letters for specific job openings and helps you answer employer questions based on your resume, powered by AI.
 
+Try the application here: [ApplyCopilot HF Spaces](https://huggingface.co/spaces/mcikalmerdeka/apply-copilot)
+
 ## 🚀 Features
 
 ### 📝 Cover Letter Generator
@@ -144,8 +146,8 @@ An intelligent tool that helps you throughout your job application process. Appl
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/mcikalmerdeka/ApplyCopilot
-cd ApplyCopilot
+git clone https://github.com/mcikalmerdeka/apply-copilot
+cd apply-copilot
 ```
 
 2. Create a virtual environment:
