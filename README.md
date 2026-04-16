@@ -1,3 +1,15 @@
+---
+title: Apply Copilot
+emoji: 📝
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: "6.5.1"
+python_version: "3.12"
+app_file: app.py
+pinned: false
+---
+
 # ApplyCopilot - Your AI Job Application Assistant
 
 An intelligent tool that helps you throughout your job application process. ApplyCopilot creates tailored cover letters for specific job openings and helps you answer employer questions based on your resume, powered by AI.
