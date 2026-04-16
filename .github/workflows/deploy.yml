@@ -93,6 +93,7 @@ jobs:
                   "data/cover_letter_examples/*",
                   "data/resumes/*",
                   "data/output/*",
+                  "data/vector_stores/*",
               ],
           )
           print("✅ Successfully deployed to Hugging Face Space!")
