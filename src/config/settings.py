@@ -19,10 +19,18 @@ for directory in [DATA_DIR, RESUMES_DIR, COVER_LETTER_EXAMPLES_DIR, VECTOR_STORE
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_MODEL = "claude-sonnet-4-6"  # Anthropic Claude Sonnet 4.6
 
-# Vector store settings
-CHUNK_SIZE = 350
-CHUNK_OVERLAP = 50
-TOP_K_RESULTS = 3
+# Vector store settings - Optimized for Portfolio RAG
+CHUNK_SIZE = 800  # Increased for larger semantic units in portfolio
+CHUNK_OVERLAP = 100  # Increased overlap for better context continuity
+TOP_K_RESULTS = 5  # Increased to get more relevant project details
+
+# Resume context settings (no RAG for resume - direct injection)
+MAX_RESUME_LENGTH_FOR_DIRECT = 3000  # If resume < this chars, use direct injection
+
+# Portfolio settings
+PORTFOLIO_CHUNK_SIZE = 1000
+PORTFOLIO_CHUNK_OVERLAP = 150
+PORTFOLIO_TOP_K = 8  # Get more results for comprehensive portfolio coverage
 
 # Cover letter settings
 MAX_WORDS = 500

@@ -1,6 +1,7 @@
 """
 Employer Q&A Chatbot handler for ApplyCopilot.
-Handles conversations with employers/recruiters based on indexed resume.
+Handles conversations with employers/recruiters based on indexed resume and portfolio.
+Uses hybrid approach: Resume (direct injection) + Portfolio (RAG)
 """
 
 from typing import List, Dict, Any, Optional
@@ -15,14 +16,14 @@ logger = setup_logger(__name__)
 
 
 class EmployerQAChatbot:
-    """Chatbot for answering employer questions based on resume."""
+    """Chatbot for answering employer questions based on resume (direct) and portfolio (RAG)."""
     
     def __init__(self, vector_store_manager, llm_model: str = LLM_MODEL):
         """
         Initialize the employer Q&A chatbot.
         
         Args:
-            vector_store_manager: VectorStoreManager instance with loaded resume
+            vector_store_manager: VectorStoreManager instance with loaded resume/portfolio
             llm_model: LLM model name to use
         """
         self.llm = ChatAnthropic(model=llm_model, temperature=0.7)
@@ -63,9 +64,38 @@ class EmployerQAChatbot:
         """Get the current chat history."""
         return self.chat_history.copy()
     
+    def _build_context(self, question: str) -> str:
+        """
+        Build context using hybrid approach:
+        - Resume: Direct injection (full text, no RAG)
+        - Portfolio: RAG retrieval (if available)
+        
+        Args:
+            question: The employer's question for portfolio retrieval
+            
+        Returns:
+            Combined context string
+        """
+        context_parts = []
+        
+        # 1. Add resume context (always direct injection)
+        if self.vector_store_manager.has_resume():
+            resume_context = self.vector_store_manager.get_resume_context(use_rag=False)
+            context_parts.append("=== RESUME ===\n" + resume_context)
+            logger.info(f"Added resume context to chat ({len(resume_context)} chars)")
+        
+        # 2. Add portfolio context via RAG (if available)
+        if self.vector_store_manager.has_portfolio():
+            portfolio_context = self.vector_store_manager.get_portfolio_context(question)
+            if portfolio_context:
+                context_parts.append("\n\n=== RELEVANT PROJECTS FROM PORTFOLIO ===\n" + portfolio_context)
+                logger.info(f"Added portfolio context to chat via RAG ({len(portfolio_context)} chars)")
+        
+        return "\n\n".join(context_parts) if context_parts else "No context available."
+    
     def answer_question(self, question: str, history: List[Dict[str, Any]]) -> str:
         """
-        Answer an employer question based on resume context.
+        Answer an employer question based on hybrid context (resume direct + portfolio RAG).
         
         Args:
             question: The employer's question
@@ -77,14 +107,12 @@ class EmployerQAChatbot:
         try:
             logger.info(f"Processing employer question: {question[:100]}...")
             
-            # Check if vector store is available
-            if self.vector_store_manager.vector_store is None:
+            # Check if resume is available
+            if not self.vector_store_manager.has_resume():
                 return "❌ Error: No resume indexed yet. Please index a resume first before using the chatbot."
             
-            # Retrieve relevant resume context
-            retriever = self.vector_store_manager.get_retriever()
-            relevant_docs = retriever.invoke(question)
-            context = "\n\n".join([doc.page_content for doc in relevant_docs])
+            # Build hybrid context (resume direct + portfolio RAG)
+            context = self._build_context(question)
             
             # Get system prompt with optional job context
             system_prompt = get_employer_qa_system_prompt(
@@ -107,15 +135,21 @@ class EmployerQAChatbot:
                 elif role == "assistant":
                     messages.append(AIMessage(content=content))
             
-            # Add current question with context
-            current_prompt = f"""**Resume Context:**
+            # Add current question with hybrid context
+            current_prompt = f"""**Candidate Context (Resume + Portfolio):**
 {context}
 
 **Employer's Question:**
 {question}
 
+**Context Usage Guidelines:**
+- Use the RESUME section for work experience, education, and core skills
+- Use the PORTFOLIO section for specific project examples and technical demonstrations
+- Reference specific projects from the portfolio when relevant to the question
+- Answer based ONLY on the information available in the context above
+
 **Your Response:**
-Please provide a helpful, professional answer to the employer's question based on the resume context above."""
+Please provide a helpful, professional answer to the employer's question based on the candidate context above."""
             messages.append(HumanMessage(content=current_prompt))
             
             # Generate response

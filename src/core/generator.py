@@ -22,7 +22,7 @@ logger = setup_logger(__name__)
 
 
 class CoverLetterGenerator:
-    """Main class for generating personalized cover letters."""
+    """Main class for generating personalized cover letters using hybrid approach."""
     
     def __init__(self, llm_model: str = LLM_MODEL):
         """
@@ -63,6 +63,24 @@ class CoverLetterGenerator:
             logger.error(f"Error loading cover letter examples: {str(e)}")
             raise
     
+    def load_portfolio(self, portfolio_path: str) -> dict:
+        """
+        Load portfolio text file for RAG-based context retrieval.
+        
+        Args:
+            portfolio_path: Path to the portfolio text file
+            
+        Returns:
+            Dictionary with portfolio info
+        """
+        try:
+            result = self.vector_store_manager.load_and_index_portfolio(portfolio_path)
+            logger.info("Portfolio loaded and indexed successfully")
+            return result
+        except Exception as e:
+            logger.error(f"Error loading portfolio: {str(e)}")
+            raise
+    
     def _get_combined_examples(self) -> str:
         """Combine all cover letter examples into a single reference text."""
         if not self.cover_letter_examples:
@@ -75,10 +93,43 @@ class CoverLetterGenerator:
         )
         return combined
     
+    def _build_context(self, job_description: str) -> str:
+        """
+        Build context using hybrid approach:
+        - Resume: Direct injection (full text, no RAG)
+        - Portfolio: RAG retrieval (if available)
+        
+        Args:
+            job_description: Job description for portfolio retrieval
+            
+        Returns:
+            Combined context string
+        """
+        context_parts = []
+        
+        # 1. Add resume context (always direct injection)
+        if self.vector_store_manager.has_resume():
+            resume_context = self.vector_store_manager.get_resume_context(use_rag=False)
+            context_parts.append("=== RESUME ===\n" + resume_context)
+            logger.info(f"Added resume context ({len(resume_context)} chars)")
+        else:
+            logger.warning("No resume loaded")
+        
+        # 2. Add portfolio context via RAG (if available)
+        if self.vector_store_manager.has_portfolio():
+            portfolio_context = self.vector_store_manager.get_portfolio_context(job_description)
+            if portfolio_context:
+                context_parts.append("\n\n=== RELEVANT PROJECTS FROM PORTFOLIO ===\n" + portfolio_context)
+                logger.info(f"Added portfolio context via RAG ({len(portfolio_context)} chars)")
+        else:
+            logger.info("No portfolio loaded (optional)")
+        
+        return "\n\n".join(context_parts)
+    
     def generate_cover_letter(self, job_description: str, company_name: str, 
                             job_title: str) -> str:
         """
-        Generate a personalized cover letter.
+        Generate a personalized cover letter using hybrid context approach.
         
         Args:
             job_description: The job description text
@@ -98,23 +149,19 @@ class CoverLetterGenerator:
             # Get combined examples
             examples_text = self._get_combined_examples()
             
-            retriever = self.vector_store_manager.get_retriever()
-            # Create the processing chain (retriever gets job_description only; we pass dict with candidate_name)
-            chain = (
-                {
-                    "context": lambda x: "\n\n".join(
-                        doc.page_content for doc in retriever.invoke(x["job_description"])
-                    ),
-                    "job_description": lambda x: x["job_description"],
-                    "example_style": lambda x: examples_text,
-                    "candidate_name": lambda x: x["candidate_name"],
-                }
-                | prompt
-                | self.llm
-            )
+            # Build hybrid context (resume direct + portfolio RAG)
+            context = self._build_context(job_description)
             
             # Generate the cover letter
-            result = chain.invoke({"job_description": job_description, "candidate_name": CANDIDATE_NAME})
+            messages = prompt.format_messages(
+                context=context,
+                job_description=job_description,
+                example_style=examples_text,
+                candidate_name=CANDIDATE_NAME,
+                max_words=MAX_WORDS
+            )
+            
+            result = self.llm.invoke(messages)
             logger.info("Cover letter generated successfully")
             
             return result.content
@@ -220,15 +267,15 @@ class CoverLetterGenerator:
                              job_title: str, contact_name: str, contact_position: str,
                              resume_link: str) -> str:
         """
-        Generate a concise cold message for reaching out to a contact person.
+        Generate a concise cold message using hybrid context approach.
         
         Args:
             job_description: The job description text
             company_name: Name of the company
             job_title: Title of the position
             contact_name: Name of the contact person
-            contact_position: Position/title of the contact person (e.g., "HR Manager", "Tech Lead")
-            resume_link: Link to the resume (Google Drive or other URL)
+            contact_position: Position/title of the contact person
+            resume_link: Link to the resume
         
         Returns:
             Generated cold message text
@@ -245,32 +292,20 @@ class CoverLetterGenerator:
             )
             prompt = ChatPromptTemplate.from_template(template)
             
-            retriever = self.vector_store_manager.get_retriever()
-            # Create the processing chain
-            chain = (
-                {
-                    "context": lambda x: "\n\n".join(
-                        doc.page_content for doc in retriever.invoke(x["job_description"])
-                    ),
-                    "job_description": lambda x: x["job_description"],
-                    "company_name": lambda x: x["company_name"],
-                    "job_title": lambda x: x["job_title"],
-                    "contact_name": lambda x: x["contact_name"],
-                    "contact_position": lambda x: x["contact_position"],
-                }
-                | prompt
-                | self.llm
-            )
+            # Build hybrid context
+            context = self._build_context(job_description)
             
             # Generate the cold message
-            result = chain.invoke({
-                "job_description": job_description,
-                "company_name": company_name,
-                "job_title": job_title,
-                "contact_name": contact_name,
-                "contact_position": contact_position,
-            })
+            messages = prompt.format_messages(
+                context=context,
+                job_description=job_description,
+                company_name=company_name,
+                job_title=job_title,
+                contact_name=contact_name,
+                contact_position=contact_position
+            )
             
+            result = self.llm.invoke(messages)
             logger.info("Cold message generated successfully")
             return result.content
             
