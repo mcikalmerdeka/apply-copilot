@@ -25,3 +25,6 @@ logs/
 
 # Opencode config
 .opencode/
+
+# Other files
+other/

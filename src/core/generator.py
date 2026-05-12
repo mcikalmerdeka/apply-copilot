@@ -1,10 +1,9 @@
 import os
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
+from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph
@@ -13,11 +12,12 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from src.config.logging_config import setup_logger
-from src.config.settings import (LLM_MODEL, MAX_WORDS, COVER_LETTER_EXAMPLES_DIR, 
+from src.config.settings import (LLM_MODEL, MAX_WORDS, COVER_LETTER_EXAMPLES_DIR,
                                  OUTPUT_DIR, CANDIDATE_NAME, GITHUB_LINK, WEBSITE_LINK)
 from src.config.prompts import get_cover_letter_prompt, get_cold_message_prompt
 from src.core.vector_store import VectorStoreManager
 
+load_dotenv()
 logger = setup_logger(__name__)
 
 
@@ -27,11 +27,15 @@ class CoverLetterGenerator:
     def __init__(self, llm_model: str = LLM_MODEL):
         """
         Initialize the cover letter generator.
-        
+
         Args:
             llm_model: LLM model name to use
         """
-        self.llm = ChatAnthropic(model=llm_model, temperature=0.7)
+        self.client = OpenAI(
+            base_url="https://opencode.ai/zen/go/v1",
+            api_key=os.getenv("OPENCODE_API_KEY")
+        )
+        self.model = llm_model
         self.vector_store_manager = VectorStoreManager()
         self.cover_letter_examples = []
         logger.info(f"Initialized CoverLetterGenerator with LLM model: {llm_model}")
@@ -144,27 +148,36 @@ class CoverLetterGenerator:
             
             # Get the prompt template
             template = get_cover_letter_prompt(MAX_WORDS)
-            prompt = ChatPromptTemplate.from_template(template)
-            
+
             # Get combined examples
             examples_text = self._get_combined_examples()
-            
+
             # Build hybrid context (resume direct + portfolio RAG)
             context = self._build_context(job_description)
-            
-            # Generate the cover letter
-            messages = prompt.format_messages(
+
+            # Format the prompt
+            prompt = template.format(
                 context=context,
                 job_description=job_description,
                 example_style=examples_text,
                 candidate_name=CANDIDATE_NAME,
                 max_words=MAX_WORDS
             )
-            
-            result = self.llm.invoke(messages)
+
+            # Generate the cover letter
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7
+            )
             logger.info("Cover letter generated successfully")
-            
-            return result.content
+
+            return response.choices[0].message.content
             
         except Exception as e:
             logger.error(f"Error generating cover letter: {str(e)}")
@@ -290,13 +303,12 @@ class CoverLetterGenerator:
                 github_link=GITHUB_LINK,
                 website_link=WEBSITE_LINK
             )
-            prompt = ChatPromptTemplate.from_template(template)
-            
+
             # Build hybrid context
             context = self._build_context(job_description)
-            
-            # Generate the cold message
-            messages = prompt.format_messages(
+
+            # Format the prompt
+            prompt = template.format(
                 context=context,
                 job_description=job_description,
                 company_name=company_name,
@@ -304,10 +316,20 @@ class CoverLetterGenerator:
                 contact_name=contact_name,
                 contact_position=contact_position
             )
-            
-            result = self.llm.invoke(messages)
+
+            # Generate the cold message
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7
+            )
             logger.info("Cold message generated successfully")
-            return result.content
+            return response.choices[0].message.content
             
         except Exception as e:
             logger.error(f"Error generating cold message: {str(e)}")

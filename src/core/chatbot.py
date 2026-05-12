@@ -4,14 +4,16 @@ Handles conversations with employers/recruiters based on indexed resume and port
 Uses hybrid approach: Resume (direct injection) + Portfolio (RAG)
 """
 
+import os
 from typing import List, Dict, Any, Optional
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from dotenv import load_dotenv
+from openai import OpenAI
 
 from src.config.logging_config import setup_logger
 from src.config.settings import LLM_MODEL, CANDIDATE_NAME
 from src.config.prompts import get_employer_qa_system_prompt
 
+load_dotenv()
 logger = setup_logger(__name__)
 
 
@@ -21,20 +23,24 @@ class EmployerQAChatbot:
     def __init__(self, vector_store_manager, llm_model: str = LLM_MODEL):
         """
         Initialize the employer Q&A chatbot.
-        
+
         Args:
             vector_store_manager: VectorStoreManager instance with loaded resume/portfolio
             llm_model: LLM model name to use
         """
-        self.llm = ChatAnthropic(model=llm_model, temperature=0.7)
+        self.client = OpenAI(
+            base_url="https://opencode.ai/zen/go/v1",
+            api_key=os.getenv("OPENCODE_API_KEY")
+        )
+        self.model = llm_model
         self.vector_store_manager = vector_store_manager
         self.chat_history: List[Dict[str, str]] = []
         self.candidate_name = CANDIDATE_NAME
-        
+
         # Job context (optional, for more contextual answers)
         self.job_context: Optional[str] = None
         self.job_description: Optional[str] = None
-        
+
         logger.info(f"Initialized EmployerQAChatbot with LLM model: {llm_model}")
     
     def set_job_context(self, job_context: str, job_description: str = "") -> None:
@@ -119,22 +125,22 @@ class EmployerQAChatbot:
                 job_context=self.job_context,
                 job_description=self.job_description
             )
-            
+
             # Prepare messages for the LLM
             messages = []
-            
+
             # Add system context
-            messages.append(SystemMessage(content=system_prompt))
-            
+            messages.append({"role": "system", "content": system_prompt})
+
             # Add previous chat history
             for msg in history:
                 role = msg.get("role", "")
                 content = msg.get("content", "")
                 if role == "user":
-                    messages.append(HumanMessage(content=content))
+                    messages.append({"role": "user", "content": content})
                 elif role == "assistant":
-                    messages.append(AIMessage(content=content))
-            
+                    messages.append({"role": "assistant", "content": content})
+
             # Add current question with hybrid context
             current_prompt = f"""**Candidate Context (Resume + Portfolio):**
 {context}
@@ -150,11 +156,15 @@ class EmployerQAChatbot:
 
 **Your Response:**
 Please provide a helpful, professional answer to the employer's question based on the candidate context above."""
-            messages.append(HumanMessage(content=current_prompt))
-            
+            messages.append({"role": "user", "content": current_prompt})
+
             # Generate response
-            response = self.llm.invoke(messages)
-            answer = response.content
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.7
+            )
+            answer = response.choices[0].message.content
             
             logger.info(f"Generated answer (length: {len(answer)} chars)")
             return answer

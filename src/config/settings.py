@@ -17,7 +17,7 @@ for directory in [DATA_DIR, RESUMES_DIR, COVER_LETTER_EXAMPLES_DIR, VECTOR_STORE
 
 # Model settings
 EMBEDDING_MODEL = "text-embedding-3-small"
-LLM_MODEL = "claude-sonnet-4-6"  # Anthropic Claude Sonnet 4.6
+LLM_MODEL = "kimi-k2.6"  # OpenCode OpenAI-compatible endpoint
 
 # Vector store settings - Optimized for Portfolio RAG
 CHUNK_SIZE = 800  # Increased for larger semantic units in portfolio
