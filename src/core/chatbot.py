@@ -12,6 +12,7 @@ from openai import OpenAI
 from src.config.logging_config import setup_logger
 from src.config.settings import LLM_MODEL, CANDIDATE_NAME
 from src.config.prompts import get_employer_qa_system_prompt
+from src.core.web_search import WebSearchTool
 
 load_dotenv()
 logger = setup_logger(__name__)
@@ -34,6 +35,7 @@ class EmployerQAChatbot:
         )
         self.model = llm_model
         self.vector_store_manager = vector_store_manager
+        self.web_search = WebSearchTool()
         self.chat_history: List[Dict[str, str]] = []
         self.candidate_name = CANDIDATE_NAME
 
@@ -99,27 +101,53 @@ class EmployerQAChatbot:
         
         return "\n\n".join(context_parts) if context_parts else "No context available."
     
+    def _extract_job_info(self) -> tuple:
+        """Extract job title and company name from job_context if available."""
+        job_title = None
+        company_name = None
+        if self.job_context and " at " in self.job_context:
+            parts = self.job_context.replace("Position: ", "").split(" at ", 1)
+            job_title = parts[0].strip()
+            company_name = parts[1].strip()
+        elif self.job_context:
+            job_title = self.job_context.replace("Position: ", "").strip()
+        return job_title, company_name
+
     def answer_question(self, question: str, history: List[Dict[str, Any]]) -> str:
         """
         Answer an employer question based on hybrid context (resume direct + portfolio RAG).
-        
+        Performs real-time web search for salary and market-related questions.
+
         Args:
             question: The employer's question
             history: List of previous messages in OpenAI format
-        
+
         Returns:
             Generated response
         """
         try:
             logger.info(f"Processing employer question: {question[:100]}...")
-            
+
             # Check if resume is available
             if not self.vector_store_manager.has_resume():
                 return "❌ Error: No resume indexed yet. Please index a resume first before using the chatbot."
-            
+
             # Build hybrid context (resume direct + portfolio RAG)
             context = self._build_context(question)
-            
+
+            # Perform web search if question is salary-related
+            search_context = ""
+            if self.web_search.is_salary_question(question):
+                job_title, company_name = self._extract_job_info()
+                if job_title:
+                    logger.info(f"Salary question detected. Searching web for: {job_title} at {company_name or 'any company'}")
+                    search_results = self.web_search.search_salary(job_title, company_name)
+                    if search_results:
+                        search_context = f"\n\n**Real-Time Internet Search Results (Current Market Data):**\n{search_results}"
+                        logger.info("Web search results added to context")
+                else:
+                    logger.info("Salary question detected but no job title available for search")
+
             # Get system prompt with optional job context
             system_prompt = get_employer_qa_system_prompt(
                 job_context=self.job_context,
@@ -141,9 +169,9 @@ class EmployerQAChatbot:
                 elif role == "assistant":
                     messages.append({"role": "assistant", "content": content})
 
-            # Add current question with hybrid context
+            # Build the current prompt
             current_prompt = f"""**Your Resume and Portfolio Context:**
-{context}
+{context}{search_context}
 
 **Employer's Question:**
 {question}
@@ -155,9 +183,23 @@ class EmployerQAChatbot:
 - Use the PORTFOLIO section for your specific project examples and technical demonstrations
 - Reference your projects naturally when relevant (e.g., "In my project... I...")
 - Answer based ONLY on the information available in the context above
-
+"""
+            # Add specific instruction for salary questions with search results
+            if search_context:
+                current_prompt += """
+**Salary Response Guidelines:**
+- Real-time market salary data has been provided above from internet search results.
+- Use this data to give an informed, contextual answer about your salary expectation.
+- Frame it as your personal expectation based on current market research and your experience level.
+- Provide a reasonable range that aligns with the market data, while remaining open to negotiation.
+- Keep the tone professional and confident.
+"""
+            else:
+                current_prompt += """
 **Your Response:**
-Answer the employer's question directly as yourself, in a helpful and professional manner."""
+Answer the employer's question directly as yourself, in a helpful and professional manner.
+"""
+
             messages.append({"role": "user", "content": current_prompt})
 
             # Generate response
@@ -167,10 +209,10 @@ Answer the employer's question directly as yourself, in a helpful and profession
                 temperature=0.7
             )
             answer = response.choices[0].message.content
-            
+
             logger.info(f"Generated answer (length: {len(answer)} chars)")
             return answer
-            
+
         except Exception as e:
             error_msg = f"❌ Error generating response: {str(e)}"
             logger.error(error_msg)
