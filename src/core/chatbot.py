@@ -142,20 +142,22 @@ class EmployerQAChatbot:
                     messages.append({"role": "assistant", "content": content})
 
             # Add current question with hybrid context
-            current_prompt = f"""**Candidate Context (Resume + Portfolio):**
+            current_prompt = f"""**Your Resume and Portfolio Context:**
 {context}
 
 **Employer's Question:**
 {question}
 
-**Context Usage Guidelines:**
-- Use the RESUME section for work experience, education, and core skills
-- Use the PORTFOLIO section for specific project examples and technical demonstrations
-- Reference specific projects from the portfolio when relevant to the question
+**Reminder:**
+- You are Muhammad Cikal Merdeka. Answer in the first person using "I", "me", and "my".
+- Do NOT refer to yourself in the third person (no "Cikal", "he", "his", "the candidate").
+- Use the RESUME section for your work experience, education, and core skills
+- Use the PORTFOLIO section for your specific project examples and technical demonstrations
+- Reference your projects naturally when relevant (e.g., "In my project... I...")
 - Answer based ONLY on the information available in the context above
 
 **Your Response:**
-Please provide a helpful, professional answer to the employer's question based on the candidate context above."""
+Answer the employer's question directly as yourself, in a helpful and professional manner."""
             messages.append({"role": "user", "content": current_prompt})
 
             # Generate response
