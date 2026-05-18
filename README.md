@@ -190,12 +190,11 @@ This will launch the Gradio web interface at `http://127.0.0.1:7860`
 Before using any features, complete the Setup section at the top:
 
 1. **Upload Resume (Required)**: Upload your resume PDF file
-   - Click "📁 Index Resume" to process the resume
-   - Uses direct context injection (full resume text)
+   - Resume is automatically processed with direct context injection (full resume text)
+   - No manual action needed after upload
 
 2. **Upload Portfolio (Optional)**: Upload a TXT file with your portfolio/projects
-   - Click "📁 Index Portfolio" to process the portfolio
-   - Uses RAG for semantic retrieval of relevant projects
+   - Portfolio is automatically indexed for semantic retrieval (RAG)
    - Include project descriptions, technologies used, and outcomes
 
 3. **Restart if needed**: Click "🔄 Restart Application" to clear all data and start fresh

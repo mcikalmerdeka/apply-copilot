@@ -34,9 +34,10 @@ class ApplyCopilotUI:
         
         logger.info("Initialized ApplyCopilotUI")
     
-    def index_resume(self, resume_file) -> str:
+    def process_resume(self, resume_file) -> str:
         """
-        Index a resume from uploaded file using direct injection (no RAG).
+        Process a resume from uploaded file using direct context injection (no RAG).
+        Automatically triggered when a resume file is uploaded.
         
         Args:
             resume_file: The uploaded resume file (Gradio file object)
@@ -46,7 +47,7 @@ class ApplyCopilotUI:
         """
         try:
             if resume_file is None:
-                return "❌ Please upload a resume file first."
+                return "⏳ Waiting for resume upload..."
             
             # Handle Gradio file upload - resume_file is a file path or dict
             if isinstance(resume_file, dict):
@@ -74,8 +75,8 @@ class ApplyCopilotUI:
             if temp_vector_path.exists():
                 shutil.rmtree(temp_vector_path)
             
-            # Load and index the resume (direct injection approach)
-            logger.info(f"Indexing resume with direct injection approach")
+            # Load and process the resume (direct injection approach)
+            logger.info(f"Processing resume with direct injection approach")
             result = self.generator.vector_store_manager.load_and_index_resume(str(resume_path))
             self.generator.vector_store_manager.save_vector_store(str(temp_vector_path), store_type="resume")
             
@@ -85,18 +86,19 @@ class ApplyCopilotUI:
             # Load cover letter examples
             self.generator.load_cover_letter_examples()
             
-            message = f"✅ Resume indexed successfully: {Path(uploaded_path).name} ({result['text_length']} chars) - Using direct context injection"
+            message = f"✅ Resume processed successfully: {Path(uploaded_path).name} ({result['text_length']} chars) - Using direct context injection"
             logger.info(message)
             return message
             
         except Exception as e:
-            error_msg = f"❌ Error indexing resume: {str(e)}"
+            error_msg = f"❌ Error processing resume: {str(e)}"
             logger.error(error_msg)
             return error_msg
     
     def index_portfolio(self, portfolio_file) -> str:
         """
         Index a portfolio from uploaded file using RAG approach.
+        Automatically triggered when a portfolio file is uploaded.
         
         Args:
             portfolio_file: The uploaded portfolio file (Gradio file object)
@@ -106,7 +108,7 @@ class ApplyCopilotUI:
         """
         try:
             if portfolio_file is None:
-                return "⚠️ No portfolio file uploaded. This is optional - you can proceed without a portfolio."
+                return "⏳ No portfolio uploaded (optional). Upload a .txt file to include portfolio projects."
             
             # Handle Gradio file upload
             if isinstance(portfolio_file, dict):
@@ -203,7 +205,7 @@ class ApplyCopilotUI:
             logger.info("Application restarted successfully")
             return (
                 "🔄 Application restarted. Please upload a new resume and enter job details.",  # index_status
-                "No portfolio indexed (optional).",   # portfolio_status
+                "⏳ No portfolio uploaded (optional). Upload a .txt file to include portfolio projects.",   # portfolio_status
                 "No job details saved yet.",   # job_status
                 "❌ No context loaded. Please upload a resume and enter job details.",  # qa_context_status
                 None,   # resume_upload (clear file)
@@ -276,7 +278,7 @@ class ApplyCopilotUI:
                 return "", None, "❌ Please fill in all job details in the Setup section"
             
             if not self.generator.vector_store_manager.has_resume():
-                return "", None, "❌ Please upload and index a resume first in the Setup section"
+                return "", None, "❌ Please upload a resume first in the Setup section"
             
             # Generate cover letter
             logger.info(f"Generating cover letter for {self.job_details['company_name']} - {self.job_details['job_title']}")
@@ -322,7 +324,7 @@ class ApplyCopilotUI:
                 return "", None, "❌ Please fill in all job details in the Setup section"
             
             if not self.generator.vector_store_manager.has_resume():
-                return "", None, "❌ Please upload and index a resume first in the Setup section"
+                return "", None, "❌ Please upload a resume first in the Setup section"
             
             if not contact_name or not contact_position:
                 return "", None, "❌ Please enter both contact name and position"
@@ -367,30 +369,28 @@ class ApplyCopilotUI:
         with gr.Row() as setup_row:
             with gr.Column(scale=1):
                 gr.Markdown("### 📋 Step 1: Upload Resume (Required)")
-                gr.Markdown("*Resume uses direct context injection (full text)*")
+                gr.Markdown("*Resume is automatically processed with direct context injection (full text)*")
                 resume_upload = gr.File(
                     label="Upload Resume PDF",
                     file_types=[".pdf"],
                     type="filepath"
                 )
-                index_btn = gr.Button("📁 Index Resume", variant="primary")
                 index_status = gr.Textbox(
                     label="Resume Status",
-                    value="No resume indexed yet. Please upload a resume PDF.",
+                    value="⏳ Waiting for resume upload...",
                     interactive=False
                 )
                 
                 gr.Markdown("### 📂 Step 2: Upload Portfolio (Optional)")
-                gr.Markdown("*Portfolio uses RAG for semantic retrieval of relevant projects*")
+                gr.Markdown("*Portfolio is automatically indexed with RAG for semantic retrieval of relevant projects*")
                 portfolio_upload = gr.File(
                     label="Upload Portfolio TXT",
                     file_types=[".txt"],
                     type="filepath"
                 )
-                portfolio_btn = gr.Button("📁 Index Portfolio", variant="secondary")
                 portfolio_status = gr.Textbox(
                     label="Portfolio Status",
-                    value="No portfolio indexed (optional). Upload a .txt file to include portfolio projects.",
+                    value="⏳ No portfolio uploaded (optional). Upload a .txt file to include portfolio projects.",
                     interactive=False
                 )
             
@@ -426,14 +426,14 @@ class ApplyCopilotUI:
                     interactive=False
                 )
         
-        # Event handlers for setup section
-        index_btn.click(
-            fn=self.index_resume,
+        # Event handlers for setup section - auto-trigger on file upload
+        resume_upload.change(
+            fn=self.process_resume,
             inputs=[resume_upload],
             outputs=[index_status]
         )
         
-        portfolio_btn.click(
+        portfolio_upload.change(
             fn=self.index_portfolio,
             inputs=[portfolio_upload],
             outputs=[portfolio_status]
@@ -490,7 +490,7 @@ class ApplyCopilotUI:
         with gr.Tab("💬 Employer Q&A Assistant", id="employer_qa") as tab:
             gr.Markdown(f"## Chat with employers on behalf of {CANDIDATE_NAME}")
             gr.Markdown(
-                "Answer questions from recruiters and hiring managers based on your indexed resume and job details. "
+                "Answer questions from recruiters and hiring managers based on your processed resume and job details. "
                 "The AI assistant will provide professional responses using your background information."
             )
             
@@ -556,7 +556,7 @@ class ApplyCopilotUI:
                     return "", history
                 
                 if not self.generator.vector_store_manager.has_resume():
-                    history.append({"role": "assistant", "content": "❌ Please load a resume first by uploading a PDF in the Setup section."})
+                    history.append({"role": "assistant", "content": "❌ Please upload a resume PDF in the Setup section first."})
                     return "", history
                 
                 try:
@@ -577,9 +577,9 @@ class ApplyCopilotUI:
             def update_qa_context():
                 """Update the context status display."""
                 if not self.generator.vector_store_manager.has_resume():
-                    return "❌ No resume indexed. Please upload a resume PDF in the Setup section."
+                    return "❌ No resume processed. Please upload a resume PDF in the Setup section."
                 
-                context_info = "✅ Resume indexed (direct injection)"
+                context_info = "✅ Resume processed (direct injection)"
                 
                 if self.generator.vector_store_manager.has_portfolio():
                     context_info += " | Portfolio indexed (RAG)"
