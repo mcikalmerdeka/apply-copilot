@@ -1,4 +1,5 @@
 import os
+import uuid
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
@@ -31,9 +32,16 @@ class CoverLetterGenerator:
         Args:
             llm_model: LLM model name to use
         """
+        # OpenCode Go requires a stable session ID in the `x-opencode-session` header
+        # per conversation and expects clients to identify themselves with their own
+        # User-Agent. See https://opencode.ai/docs/go/#where-can-i-use-it
         self.client = OpenAI(
             base_url="https://opencode.ai/zen/go/v1",
-            api_key=os.getenv("OPENCODE_API_KEY")
+            api_key=os.getenv("OPENCODE_API_KEY"),
+            default_headers={
+                "x-opencode-session": str(uuid.uuid4()),
+                "User-Agent": "apply-copilot/1.0",
+            },
         )
         self.model = llm_model
         self.vector_store_manager = VectorStoreManager()

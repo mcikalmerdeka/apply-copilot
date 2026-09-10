@@ -5,6 +5,7 @@ Uses hybrid approach: Resume (direct injection) + Portfolio (RAG)
 """
 
 import os
+import uuid
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -29,10 +30,8 @@ class EmployerQAChatbot:
             vector_store_manager: VectorStoreManager instance with loaded resume/portfolio
             llm_model: LLM model name to use
         """
-        self.client = OpenAI(
-            base_url="https://opencode.ai/zen/go/v1",
-            api_key=os.getenv("OPENCODE_API_KEY")
-        )
+        self.session_id = str(uuid.uuid4())
+        self.client = self._create_client()
         self.model = llm_model
         self.vector_store_manager = vector_store_manager
         self.web_search = WebSearchTool()
@@ -45,6 +44,24 @@ class EmployerQAChatbot:
 
         logger.info(f"Initialized EmployerQAChatbot with LLM model: {llm_model}")
     
+    def _create_client(self) -> OpenAI:
+        """
+        Create the OpenCode Go LLM client.
+
+        OpenCode Go requires a stable session ID in the `x-opencode-session` header
+        per conversation (enforced since Sep 2026) and expects clients to identify
+        themselves with their own User-Agent.
+        See https://opencode.ai/docs/go/#where-can-i-use-it
+        """
+        return OpenAI(
+            base_url="https://opencode.ai/zen/go/v1",
+            api_key=os.getenv("OPENCODE_API_KEY"),
+            default_headers={
+                "x-opencode-session": self.session_id,
+                "User-Agent": "apply-copilot/1.0",
+            },
+        )
+
     def set_job_context(self, job_context: str, job_description: str = "") -> None:
         """
         Set job context for more contextual answers.
@@ -64,8 +81,10 @@ class EmployerQAChatbot:
         logger.info("Job context cleared")
     
     def clear_history(self) -> None:
-        """Clear the chat history."""
+        """Clear the chat history and rotate the OpenCode Go session ID (stable per conversation)."""
         self.chat_history = []
+        self.session_id = str(uuid.uuid4())
+        self.client = self._create_client()
         logger.info("Chat history cleared")
     
     def get_chat_history(self) -> List[Dict[str, str]]:
