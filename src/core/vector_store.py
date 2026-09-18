@@ -154,6 +154,39 @@ class VectorStoreManager:
         """Check if resume has been loaded."""
         return self.resume_text_cache is not None
 
+    def build_context(self, query: str) -> str:
+        """
+        Build the combined generation context using the hybrid approach:
+        - Resume: Direct injection (full text, no RAG)
+        - Portfolio: RAG retrieval (if available)
+
+        Args:
+            query: Query used for portfolio RAG retrieval (job description or question)
+
+        Returns:
+            Combined context string ("" if no resume is loaded)
+        """
+        context_parts = []
+
+        # 1. Add resume context (always direct injection)
+        if self.has_resume():
+            resume_context = self.get_resume_context()
+            context_parts.append("=== RESUME ===\n" + resume_context)
+            logger.info(f"Added resume context ({len(resume_context)} chars)")
+        else:
+            logger.warning("No resume loaded")
+
+        # 2. Add portfolio context via RAG (if available)
+        if self.has_portfolio():
+            portfolio_context = self.get_portfolio_context(query)
+            if portfolio_context:
+                context_parts.append("\n\n=== RELEVANT PROJECTS FROM PORTFOLIO ===\n" + portfolio_context)
+                logger.info(f"Added portfolio context via RAG ({len(portfolio_context)} chars)")
+        else:
+            logger.info("No portfolio loaded (optional)")
+
+        return "\n\n".join(context_parts)
+
     def save_vector_store(self, save_path: str) -> None:
         """
         Save the portfolio FAISS vector store to disk.

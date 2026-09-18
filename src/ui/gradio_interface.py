@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from src.config.logging_config import setup_logger
 from src.config.settings import RESUMES_DIR, VECTOR_STORES_DIR, CANDIDATE_NAME, DATA_DIR
+from src.config.prompts import format_job_context
 from src.core.generator import CoverLetterGenerator
 from src.core.chatbot import EmployerQAChatbot
 
@@ -244,7 +245,7 @@ class ApplyCopilotUI:
             
             # Update chatbot with job context if available
             if company_name or job_title:
-                job_context = f"Position: {job_title} at {company_name}" if job_title and company_name else f"Position: {job_title or company_name}"
+                job_context = format_job_context(job_title, company_name)
                 self.chatbot.set_job_context(job_context, job_description)
             
             logger.info(f"Updated job details: {job_title} at {company_name}")

@@ -4,18 +4,13 @@ Handles conversations with employers/recruiters based on indexed resume and port
 Uses hybrid approach: Resume (direct injection) + Portfolio (RAG)
 """
 
-import os
-import uuid
 from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv
-from openai import OpenAI
-
 from src.config.logging_config import setup_logger
 from src.config.settings import LLM_MODEL, CANDIDATE_NAME
-from src.config.prompts import get_employer_qa_system_prompt
+from src.config.prompts import get_employer_qa_system_prompt, parse_job_context
 from src.core.web_search import WebSearchTool
+from src.core.llm_client import LLMClient
 
-load_dotenv()
 logger = setup_logger(__name__)
 
 
@@ -30,9 +25,7 @@ class EmployerQAChatbot:
             vector_store_manager: VectorStoreManager instance with loaded resume/portfolio
             llm_model: LLM model name to use
         """
-        self.session_id = str(uuid.uuid4())
-        self.client = self._create_client()
-        self.model = llm_model
+        self.llm = LLMClient(llm_model)
         self.vector_store_manager = vector_store_manager
         self.web_search = WebSearchTool()
         self.candidate_name = CANDIDATE_NAME
@@ -42,24 +35,11 @@ class EmployerQAChatbot:
         self.job_description: Optional[str] = None
 
         logger.info(f"Initialized EmployerQAChatbot with LLM model: {llm_model}")
-    
-    def _create_client(self) -> OpenAI:
-        """
-        Create the OpenCode Go LLM client.
 
-        OpenCode Go requires a stable session ID in the `x-opencode-session` header
-        per conversation (enforced since Sep 2026) and expects clients to identify
-        themselves with their own User-Agent.
-        See https://opencode.ai/docs/go/#where-can-i-use-it
-        """
-        return OpenAI(
-            base_url="https://opencode.ai/zen/go/v1",
-            api_key=os.getenv("OPENCODE_API_KEY"),
-            default_headers={
-                "x-opencode-session": self.session_id,
-                "User-Agent": "apply-copilot/1.0",
-            },
-        )
+    def clear_history(self) -> None:
+        """Clear the chat session and rotate the LLM session ID (stable per conversation)."""
+        self.llm.rotate_session()
+        logger.info("Chat history cleared")
 
     def set_job_context(self, job_context: str, job_description: str = "") -> None:
         """
@@ -81,50 +61,12 @@ class EmployerQAChatbot:
     
     def clear_history(self) -> None:
         """Clear the chat session and rotate the OpenCode Go session ID (stable per conversation)."""
-        self.session_id = str(uuid.uuid4())
-        self.client = self._create_client()
+        self.llm.rotate_session()
         logger.info("Chat history cleared")
-    
-    def _build_context(self, question: str) -> str:
-        """
-        Build context using hybrid approach:
-        - Resume: Direct injection (full text, no RAG)
-        - Portfolio: RAG retrieval (if available)
-        
-        Args:
-            question: The employer's question for portfolio retrieval
-            
-        Returns:
-            Combined context string
-        """
-        context_parts = []
-        
-        # 1. Add resume context (always direct injection)
-        if self.vector_store_manager.has_resume():
-            resume_context = self.vector_store_manager.get_resume_context()
-            context_parts.append("=== RESUME ===\n" + resume_context)
-            logger.info(f"Added resume context to chat ({len(resume_context)} chars)")
-        
-        # 2. Add portfolio context via RAG (if available)
-        if self.vector_store_manager.has_portfolio():
-            portfolio_context = self.vector_store_manager.get_portfolio_context(question)
-            if portfolio_context:
-                context_parts.append("\n\n=== RELEVANT PROJECTS FROM PORTFOLIO ===\n" + portfolio_context)
-                logger.info(f"Added portfolio context to chat via RAG ({len(portfolio_context)} chars)")
-        
-        return "\n\n".join(context_parts) if context_parts else "No context available."
     
     def _extract_job_info(self) -> tuple:
         """Extract job title and company name from job_context if available."""
-        job_title = None
-        company_name = None
-        if self.job_context and " at " in self.job_context:
-            parts = self.job_context.replace("Position: ", "").split(" at ", 1)
-            job_title = parts[0].strip()
-            company_name = parts[1].strip()
-        elif self.job_context:
-            job_title = self.job_context.replace("Position: ", "").strip()
-        return job_title, company_name
+        return parse_job_context(self.job_context)
 
     def answer_question(self, question: str, history: List[Dict[str, Any]]) -> str:
         """
@@ -146,7 +88,11 @@ class EmployerQAChatbot:
                 return "❌ Error: No resume indexed yet. Please index a resume first before using the chatbot."
 
             # Build hybrid context (resume direct + portfolio RAG)
-            context = self._build_context(question)
+            context = self.vector_store_manager.build_context(question)
+
+            # Fall back when nothing is available
+            if not context:
+                context = "No context available."
 
             # Perform web search if question is salary-related
             search_context = ""
@@ -216,12 +162,7 @@ Answer the employer's question directly as yourself, in a helpful and profession
             messages.append({"role": "user", "content": current_prompt})
 
             # Generate response
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7
-            )
-            answer = response.choices[0].message.content
+            answer = self.llm.complete(messages)
 
             logger.info(f"Generated answer (length: {len(answer)} chars)")
             return answer

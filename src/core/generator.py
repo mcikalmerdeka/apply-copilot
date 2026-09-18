@@ -1,8 +1,5 @@
-import os
-import uuid
 from pathlib import Path
 from dotenv import load_dotenv
-from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
@@ -16,6 +13,7 @@ from src.config.settings import (LLM_MODEL, MAX_WORDS, COVER_LETTER_EXAMPLES_DIR
                                  OUTPUT_DIR, CANDIDATE_NAME, GITHUB_LINK, WEBSITE_LINK)
 from src.config.prompts import get_cover_letter_prompt, get_cold_message_prompt
 from src.core.vector_store import VectorStoreManager
+from src.core.llm_client import LLMClient
 
 load_dotenv()
 logger = setup_logger(__name__)
@@ -31,18 +29,7 @@ class CoverLetterGenerator:
         Args:
             llm_model: LLM model name to use
         """
-        # OpenCode Go requires a stable session ID in the `x-opencode-session` header
-        # per conversation and expects clients to identify themselves with their own
-        # User-Agent. See https://opencode.ai/docs/go/#where-can-i-use-it
-        self.client = OpenAI(
-            base_url="https://opencode.ai/zen/go/v1",
-            api_key=os.getenv("OPENCODE_API_KEY"),
-            default_headers={
-                "x-opencode-session": str(uuid.uuid4()),
-                "User-Agent": "apply-copilot/1.0",
-            },
-        )
-        self.model = llm_model
+        self.llm = LLMClient(llm_model)
         self.vector_store_manager = VectorStoreManager()
         self.cover_letter_examples = []
         logger.info(f"Initialized CoverLetterGenerator with LLM model: {llm_model}")
@@ -104,39 +91,6 @@ class CoverLetterGenerator:
         )
         return combined
     
-    def _build_context(self, job_description: str) -> str:
-        """
-        Build context using hybrid approach:
-        - Resume: Direct injection (full text, no RAG)
-        - Portfolio: RAG retrieval (if available)
-        
-        Args:
-            job_description: Job description for portfolio retrieval
-            
-        Returns:
-            Combined context string
-        """
-        context_parts = []
-        
-        # 1. Add resume context (always direct injection)
-        if self.vector_store_manager.has_resume():
-            resume_context = self.vector_store_manager.get_resume_context()
-            context_parts.append("=== RESUME ===\n" + resume_context)
-            logger.info(f"Added resume context ({len(resume_context)} chars)")
-        else:
-            logger.warning("No resume loaded")
-        
-        # 2. Add portfolio context via RAG (if available)
-        if self.vector_store_manager.has_portfolio():
-            portfolio_context = self.vector_store_manager.get_portfolio_context(job_description)
-            if portfolio_context:
-                context_parts.append("\n\n=== RELEVANT PROJECTS FROM PORTFOLIO ===\n" + portfolio_context)
-                logger.info(f"Added portfolio context via RAG ({len(portfolio_context)} chars)")
-        else:
-            logger.info("No portfolio loaded (optional)")
-        
-        return "\n\n".join(context_parts)
-    
     def generate_cover_letter(self, job_description: str, company_name: str, 
                             job_title: str) -> str:
         """
@@ -160,7 +114,7 @@ class CoverLetterGenerator:
             examples_text = self._get_combined_examples()
 
             # Build hybrid context (resume direct + portfolio RAG)
-            context = self._build_context(job_description)
+            context = self.vector_store_manager.build_context(job_description)
 
             # Format the prompt
             prompt = template.format(
@@ -172,19 +126,10 @@ class CoverLetterGenerator:
             )
 
             # Generate the cover letter
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.7
-            )
+            content = self.llm.complete([{"role": "user", "content": prompt}])
             logger.info("Cover letter generated successfully")
 
-            return response.choices[0].message.content
+            return content
             
         except Exception as e:
             logger.error(f"Error generating cover letter: {str(e)}")
@@ -312,7 +257,7 @@ class CoverLetterGenerator:
             )
 
             # Build hybrid context
-            context = self._build_context(job_description)
+            context = self.vector_store_manager.build_context(job_description)
 
             # Format the prompt
             prompt = template.format(
@@ -325,18 +270,9 @@ class CoverLetterGenerator:
             )
 
             # Generate the cold message
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.7
-            )
+            content = self.llm.complete([{"role": "user", "content": prompt}])
             logger.info("Cold message generated successfully")
-            return response.choices[0].message.content
+            return content
             
         except Exception as e:
             logger.error(f"Error generating cold message: {str(e)}")

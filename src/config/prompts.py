@@ -158,6 +158,50 @@ def get_cover_letter_prompt(max_words: int = 500) -> str:
     return COVER_LETTER_TEMPLATE.replace("{max_words}", str(max_words))
 
 
+JOB_CONTEXT_PREFIX = "Position: "
+
+
+def format_job_context(job_title: str, company_name: str) -> str:
+    """
+    Build the canonical job-context string (single source for the parsing contract).
+
+    Args:
+        job_title: Job title/position
+        company_name: Company name
+
+    Returns:
+        A job-context string in the `Position: <title> at <company>` format
+    """
+    if job_title and company_name:
+        return f"{JOB_CONTEXT_PREFIX}{job_title} at {company_name}"
+    return f"{JOB_CONTEXT_PREFIX}{job_title or company_name}"
+
+
+def parse_job_context(job_context: str) -> tuple:
+    """
+    Parse a job-context string into (job_title, company_name).
+
+    Inverse of format_job_context; the canonical contract for
+    `Position: <title> at <company>` strings.
+
+    Args:
+        job_context: The job-context string
+
+    Returns:
+        Tuple of (job_title, company_name); company_name is None if absent
+    """
+    if not job_context:
+        return None, None
+
+    if " at " in job_context:
+        parts = job_context.split(" at ", 1)
+        job_title = parts[0].replace(JOB_CONTEXT_PREFIX, "").strip()
+        company_name = parts[1].strip()
+        return job_title, company_name
+
+    return job_context.replace(JOB_CONTEXT_PREFIX, "").strip(), None
+
+
 def get_employer_qa_system_prompt(job_context: str = None, job_description: str = None) -> str:
     """
     Get the employer Q&A system prompt with optional job context.
@@ -171,12 +215,8 @@ def get_employer_qa_system_prompt(job_context: str = None, job_description: str 
     """
     if job_context:
         # Extract company and job title from context if possible
-        if " at " in job_context:
-            parts = job_context.split(" at ", 1)
-            job_title = parts[0].replace("Position: ", "").strip()
-            company_name = parts[1].strip()
-        else:
-            job_title = job_context.replace("Position: ", "").strip()
+        job_title, company_name = parse_job_context(job_context)
+        if not company_name:
             company_name = "the company"
         
         # Build job description section
