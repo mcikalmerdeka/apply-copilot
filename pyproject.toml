@@ -1,7 +1,7 @@
 [project]
-name = "personalized-cover-letter-generation"
+name = "apply-copilot"
 version = "0.1.0"
-description = "AI-powered personalized cover letter generator using resume matching and LLMs"
+description = "AI job-application assistant: cover letters, employer Q&A chat, and cold outreach powered by resume injection + portfolio RAG"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -62,7 +62,7 @@ Try the application here: [ApplyCopilot HF Spaces](https://huggingface.co/spaces
 - **Hybrid Context Approach**: Direct injection for resumes (full text) + RAG for portfolios (semantic search)
 - Uses **FAISS** for efficient vector storage of portfolio projects
 - Leverages **OpenAI Embeddings** for portfolio semantic search (text-embedding-3-small)
-- **Claude Sonnet 4.6** via Anthropic API for cover letter generation and chat responses
+- **LLM via OpenCode Go** (`glm-5.3-flash`, OpenAI-compatible endpoint) for cover letter generation and chat responses
 - **Gradio** web interface with tabbed navigation
 - Implements **ReportLab** for PDF document generation
 - **Centralized Logging** for application monitoring
@@ -88,7 +88,7 @@ Try the application here: [ApplyCopilot HF Spaces](https://huggingface.co/spaces
 
 4. **Content Generation**:
    - Combines resume text with relevant portfolio projects based on job description
-   - Generates tailored content using Claude Sonnet 4.6
+   - Generates tailored content using the OpenCode Go LLM
    - References specific portfolio projects that demonstrate relevant experience
    - Maintains your personal writing style and format
 
@@ -107,7 +107,7 @@ Try the application here: [ApplyCopilot HF Spaces](https://huggingface.co/spaces
    - Uses full resume text as primary context for complete information
    - Retrieves relevant portfolio projects via semantic search when applicable
    - Considers job context (company name, position) to tailor responses
-   - Generates professional responses using Claude Sonnet 4.6
+   - Generates professional responses using the OpenCode Go LLM
    - When job details are available, emphasizes fit for the specific role
    - Maintains conversation history for context-aware responses
 
@@ -138,7 +138,9 @@ Try the application here: [ApplyCopilot HF Spaces](https://huggingface.co/spaces
 ## 📋 Requirements
 
 - Python 3.12+
-- OpenAI API key for embeddings and generation
+- OpenCode API key for text generation (`OPENCODE_API_KEY`, free endpoint)
+- OpenAI API key for embeddings (`OPENAI_API_KEY`, used for portfolio RAG)
+- Tavily API key for salary-related web search (`TAVILY_API_KEY`, optional)
 - Required Python packages (see requirements.txt)
 
 ## 🔧 Setup
@@ -163,13 +165,15 @@ cd apply-copilot
    ```
 4. Create a `.env` file with your API keys:
    ```env
+   OPENCODE_API_KEY=your_opencode_api_key
    OPENAI_API_KEY=your_openai_api_key
+   TAVILY_API_KEY=your_tavily_api_key
    ```
 5. Ensure your documents are in place:
    - Cover letter examples: `data/cover_letter_examples/` (example PDFs)
 6. **(Optional)** Customize your settings in `src/config/settings.py`:
-   - Edit `CANDIDATE_NAME = "Muhammad Cikal Merdeka"` to your full name for proper signature
-   - Update `RESUME_AI_LINK`, `RESUME_DATA_LINK`, `GITHUB_LINK`, `WEBSITE_LINK` with your links
+   - Edit `CANDIDATE_NAME = "Muhammad Cikal Merdeka"` to your full name for proper signatures, output filenames, and PDF metadata
+   - Update `GITHUB_LINK`, `WEBSITE_LINK` with your links
 
 ## 🚀 Usage
 
@@ -368,8 +372,10 @@ print(response)
 
 ## 🔒 Privacy
 
-- All processing happens through API calls to OpenAI
-- Your resume and cover letter data will be sent to OpenAI services
+- Text generation runs through API calls to OpenCode Go (`glm-5.3-flash`)
+- Embedding generation runs through API calls to OpenAI (`text-embedding-3-small`, used only for the optional portfolio RAG)
+- Salary-related questions trigger web searches through Tavily
+- Your resume and cover letter data is sent to these services as part of the LLM context
 - Generated content and chat conversations are stored locally
 - No data is retained on external servers beyond the API calls
 
