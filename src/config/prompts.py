@@ -254,7 +254,7 @@ Already applied through the portal, but wanted to reach out directly in case it 
 Let me know your thoughts. Thanks!
 
 Best regards,
-Muhammad Cikal Merdeka
+{candidate_name}
 ```
 
 **TEMPLATE FOR DATA ROLES:**
@@ -270,7 +270,7 @@ Already applied through the portal, but wanted to reach out directly in case it 
 Let me know your thoughts. Thanks!
 
 Best regards,
-Muhammad Cikal Merdeka
+{candidate_name}
 ```
 
 **STRICT INSTRUCTIONS - FOLLOW EXACTLY:**
@@ -301,7 +301,7 @@ Muhammad Cikal Merdeka
 7. **Closing**: "Let me know your thoughts. Thanks!"
    - Use this exact line
 
-8. **Sign-off**: "Best regards," on one line, then "Muhammad Cikal Merdeka" on the next line
+8. **Sign-off**: "Best regards," on one line, then "{candidate_name}" on the next line
 
 **TONE GUIDELINES:**
 - Professional but conversational (not overly formal)

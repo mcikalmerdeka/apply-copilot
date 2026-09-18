@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 from tavily import TavilyClient
@@ -61,7 +62,7 @@ class WebSearchTool:
 
     def search_salary(self, job_title: str, company_name: Optional[str] = None) -> str:
         """Search for current salary range for a specific job."""
-        query_parts = [job_title, "salary range", "2026"]
+        query_parts = [job_title, "salary range", str(datetime.now().year)]
         if company_name:
             query_parts.insert(1, f"at {company_name}")
         query = " ".join(query_parts)

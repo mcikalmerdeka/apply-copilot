@@ -136,7 +136,7 @@ class EmployerQAChatbot:
 {question}
 
 **Reminder:**
-- You are Muhammad Cikal Merdeka. Answer in the first person using "I", "me", and "my".
+- You are {self.candidate_name}. Answer in the first person using "I", "me", and "my".
 - Do NOT refer to yourself in the third person (no "Cikal", "he", "his", "the candidate").
 - Use the RESUME section for your work experience, education, and core skills
 - Use the PORTFOLIO section for your specific project examples and technical demonstrations

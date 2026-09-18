@@ -157,7 +157,7 @@ class CoverLetterGenerator:
             safe_company = company_name.replace("/", "_").replace("\\", "_").replace(".", "_")
             safe_job = job_title.replace("/", "_").replace("\\", "_").replace(".", "_")
             
-            filename = f"Cover_Letter_Muhammad_Cikal_Merdeka_{safe_company}_{safe_job}".replace(" ", "_")
+            filename = f"Cover_Letter_{CANDIDATE_NAME}_{safe_company}_{safe_job}".replace(" ", "_")
             
             if format.lower() == "pdf":
                 file_path = output_dir / f"{filename}.pdf"
@@ -198,8 +198,8 @@ class CoverLetterGenerator:
                 leftMargin=72,
                 topMargin=72,
                 bottomMargin=72,
-                title=f"Cover Letter Muhammad Cikal Merdeka - {company_name} - {job_title}",
-                author="Muhammad Cikal Merdeka",
+                title=f"Cover Letter {CANDIDATE_NAME} - {company_name} - {job_title}",
+                author=CANDIDATE_NAME,
                 subject="Job Application Cover Letter",
             )
             
