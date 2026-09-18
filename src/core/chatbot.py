@@ -35,7 +35,6 @@ class EmployerQAChatbot:
         self.model = llm_model
         self.vector_store_manager = vector_store_manager
         self.web_search = WebSearchTool()
-        self.chat_history: List[Dict[str, str]] = []
         self.candidate_name = CANDIDATE_NAME
 
         # Job context (optional, for more contextual answers)
@@ -81,15 +80,10 @@ class EmployerQAChatbot:
         logger.info("Job context cleared")
     
     def clear_history(self) -> None:
-        """Clear the chat history and rotate the OpenCode Go session ID (stable per conversation)."""
-        self.chat_history = []
+        """Clear the chat session and rotate the OpenCode Go session ID (stable per conversation)."""
         self.session_id = str(uuid.uuid4())
         self.client = self._create_client()
         logger.info("Chat history cleared")
-    
-    def get_chat_history(self) -> List[Dict[str, str]]:
-        """Get the current chat history."""
-        return self.chat_history.copy()
     
     def _build_context(self, question: str) -> str:
         """
@@ -107,7 +101,7 @@ class EmployerQAChatbot:
         
         # 1. Add resume context (always direct injection)
         if self.vector_store_manager.has_resume():
-            resume_context = self.vector_store_manager.get_resume_context(use_rag=False)
+            resume_context = self.vector_store_manager.get_resume_context()
             context_parts.append("=== RESUME ===\n" + resume_context)
             logger.info(f"Added resume context to chat ({len(resume_context)} chars)")
         

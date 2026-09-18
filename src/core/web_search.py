@@ -66,7 +66,3 @@ class WebSearchTool:
             query_parts.insert(1, f"at {company_name}")
         query = " ".join(query_parts)
         return self.search(query, max_results=3)
-
-    def search_general(self, question: str, max_results: int = 3) -> str:
-        """Perform a general web search for any question."""
-        return self.search(question, max_results=max_results)

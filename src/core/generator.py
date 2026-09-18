@@ -1,7 +1,6 @@
 import os
 import uuid
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader
@@ -121,7 +120,7 @@ class CoverLetterGenerator:
         
         # 1. Add resume context (always direct injection)
         if self.vector_store_manager.has_resume():
-            resume_context = self.vector_store_manager.get_resume_context(use_rag=False)
+            resume_context = self.vector_store_manager.get_resume_context()
             context_parts.append("=== RESUME ===\n" + resume_context)
             logger.info(f"Added resume context ({len(resume_context)} chars)")
         else:

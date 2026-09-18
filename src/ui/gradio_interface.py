@@ -69,16 +69,10 @@ class ApplyCopilotUI:
             # Copy the uploaded file to our data directory
             shutil.copy2(uploaded_path, resume_path)
             logger.info(f"Saved uploaded resume to: {resume_path}")
-            
-            # Always create fresh vector store - delete any existing temp stores
-            temp_vector_path = Path(VECTOR_STORES_DIR) / f"temp_{timestamp}"
-            if temp_vector_path.exists():
-                shutil.rmtree(temp_vector_path)
-            
+
             # Load and process the resume (direct injection approach)
             logger.info(f"Processing resume with direct injection approach")
             result = self.generator.vector_store_manager.load_and_index_resume(str(resume_path))
-            self.generator.vector_store_manager.save_vector_store(str(temp_vector_path), store_type="resume")
             
             # Store the current resume path
             self.current_resume_path = str(resume_path)
@@ -155,8 +149,7 @@ class ApplyCopilotUI:
             Tuple of cleared values for UI components
         """
         try:
-            # Clear vector store
-            self.generator.vector_store_manager.clear_vector_store(store_type="all")
+            self.generator.vector_store_manager.clear_vector_store()
             
             # Clear chatbot history
             self.chatbot.clear_history()
@@ -527,10 +520,6 @@ class ApplyCopilotUI:
                     
                     with gr.Row():
                         clear_btn = gr.Button("🗑️ Clear Chat", variant="secondary")
-                        save_btn = gr.Button("💾 Save Conversation", variant="secondary")
-            
-            # Chat status
-            chat_status = gr.Textbox(label="Chat Status", interactive=False, visible=False)
             
             # Chat examples
             gr.Markdown("### 💡 Example Questions You Might Receive")

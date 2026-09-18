@@ -24,9 +24,6 @@ CHUNK_SIZE = 800  # Increased for larger semantic units in portfolio
 CHUNK_OVERLAP = 100  # Increased overlap for better context continuity
 TOP_K_RESULTS = 5  # Increased to get more relevant project details
 
-# Resume context settings (no RAG for resume - direct injection)
-MAX_RESUME_LENGTH_FOR_DIRECT = 3000  # If resume < this chars, use direct injection
-
 # Portfolio settings
 PORTFOLIO_CHUNK_SIZE = 1000
 PORTFOLIO_CHUNK_OVERLAP = 150
@@ -37,7 +34,5 @@ MAX_WORDS = 500
 CANDIDATE_NAME = "Muhammad Cikal Merdeka"
 
 # Contact Links
-RESUME_AI_LINK = "https://drive.google.com/file/d/1ie89a22v7E1iMEglhj9KXBgu72YSq2K2/view?usp=sharing"
-RESUME_DATA_LINK = "https://drive.google.com/file/d/14vDbB6alxpNIlo266OStm0lHaqusHsxc/view?usp=sharing"
 GITHUB_LINK = "https://github.com/mcikalmerdeka"
 WEBSITE_LINK = "https://mcikalmerdeka.vercel.app/"
