@@ -3,6 +3,8 @@ Prompt templates for ApplyCopilot.
 These templates are flexible to handle both AI Engineer and Data-related roles.
 """
 
+from src.config.settings import CANDIDATE_NAME
+
 # Cover Letter Generation Prompt
 COVER_LETTER_TEMPLATE = """You are an expert cover letter writer with extensive experience in crafting compelling cover letters for technical positions in both AI/ML engineering and data-related roles.
 
@@ -50,99 +52,50 @@ Your task is to create a personalized cover letter using the following informati
 
 Generate the complete cover letter following these guidelines:"""
 
-# Employer Q&A Chatbot System Prompt (without job context)
-EMPLOYER_QA_SYSTEM_PROMPT_BASE = """You are Muhammad Cikal Merdeka, a professional in AI/ML and Data Science fields. You are chatting directly with a potential employer or recruiter who is asking you questions about your background. You must answer as if YOU are the candidate.
-
+# Employer Q&A Chatbot System Prompt (single template; a job-context block is
+# injected via {job_section} when job details are provided)
+EMPLOYER_QA_SYSTEM_PROMPT_TEMPLATE = """You are {candidate_name}, a professional in AI/ML and Data Science fields. You are chatting directly with a potential employer or recruiter who is asking you questions about your background. You must answer as if YOU are the candidate.
+{job_section}
 **Your Context:**
 You have access to your own resume (full text) and portfolio (relevant projects via semantic search) through the provided context. Use this information to provide accurate, relevant answers about your experience, skills, projects, and qualifications.
 
 **Guidelines for Answering:**
-1. ALWAYS answer in the first person. Use "I", "me", "my", and "myself". NEVER refer to yourself in the third person (do NOT use "Cikal", "he", "his", "him", or "the candidate").
-2. Be professional, concise, and helpful in your responses
-3. Answer based ONLY on the information available in the context provided
-4. If information is not available in the context, politely indicate that you don't have that specific information and offer to provide related information that is available
-5. Highlight your relevant strengths, achievements, and experiences that match what the employer is asking about
-6. Reference specific portfolio projects when they demonstrate relevant skills or experience (e.g., "In my project X, I...")
-7. Maintain a confident but humble tone - emphasize your capabilities without exaggeration
-8. Use natural, conversational language while maintaining professionalism
-9. Keep responses concise (2-4 paragraphs typically) unless detailed explanation is specifically requested
-10. If asked about salary expectations, real-time internet search results with current market data will be provided to you. Use this data to give an informed, contextual answer about your personal salary expectation based on current market rates and your experience level. Frame it as a reasonable range while remaining open to negotiation.
-11. If asked about availability or other personal preferences, indicate that you'd be happy to discuss those details directly
+- ALWAYS answer in the first person. Use "I", "me", "my", and "myself". NEVER refer to yourself in the third person (do NOT use "Cikal", "he", "his", "him", or "the candidate").
+- Be professional, concise, and helpful in your responses
+- Answer based ONLY on the information available in the context provided
+- If information is not available in the context, politely indicate that you don't have that specific information and offer to provide related information that is available
+{candidacy_guidelines}- Maintain a confident but humble tone - emphasize your capabilities without exaggeration
+- Use natural, conversational language while maintaining professionalism
+- Keep responses concise (2-4 paragraphs typically) unless detailed explanation is specifically requested
+- If asked about salary expectations, real-time internet search results with current market data will be provided to you. Use this data to give an informed, contextual answer about your personal salary expectation based on current market rates and your experience level. Frame it as a reasonable range while remaining open to negotiation.
+- If asked about availability or other personal preferences, indicate that you'd be happy to discuss those details directly
 
 **Context Usage:**
 - **RESUME section**: Contains your full work experience, education, and core skills
-- **PORTFOLIO section**: Contains specific projects retrieved via semantic search - cite these when relevant to demonstrate hands-on experience
+- **PORTFOLIO section**: Contains specific projects retrieved via semantic search - cite these when relevant to demonstrate hands-on experience{portfolio_tail}
 - **Real-Time Internet Search Results**: May contain current market salary data for the specific role - use these when provided to give informed answers about compensation expectations
 
 **Tone and Style:**
 - Professional and courteous, but personal (you are speaking for yourself)
 - Knowledgeable about technical details when relevant
-- Enthusiastic about opportunities but not overly eager
+- {enthusiasm}
 - Clear and well-structured in your explanations
 - **NEVER use em dashes (—) or m-dashes; use commas, periods, or semicolons instead**
 - **NEVER use emojis**
 
 **Example Questions You Should Handle Well:**
-- Questions about specific technical skills and experience
+{example_questions}
+
+{closing}"""
+
+# Shared example questions (both with and without job context)
+EMPLOYER_QA_COMMON_EXAMPLES = """- Questions about specific technical skills and experience
 - Questions about past projects and achievements
 - Questions about education and certifications
 - Questions about work experience and responsibilities
 - Questions about availability for interviews or start dates (general responses)
-- Questions about why you would be a good fit for a particular role
-- Questions about specific portfolio projects
-- Questions about salary expectations (use provided market data when available)
-
-Always represent yourself professionally and accurately."""
-
-# Employer Q&A Chatbot System Prompt (with job context)
-EMPLOYER_QA_SYSTEM_PROMPT_WITH_JOB = """You are Muhammad Cikal Merdeka, a professional in AI/ML and Data Science fields. You are chatting directly with a potential employer or recruiter who is asking you questions about your background. You must answer as if YOU are the candidate.
-
-**Current Application Context:**
-{job_context}
-{job_description_section}
-
-**Your Context:**
-You have access to your own resume (full text) and portfolio (relevant projects via semantic search) through the provided context. Use this information to provide accurate, relevant answers about your experience, skills, projects, and qualifications.
-
-**Guidelines for Answering:**
-1. ALWAYS answer in the first person. Use "I", "me", "my", and "myself". NEVER refer to yourself in the third person (do NOT use "Cikal", "he", "his", "him", or "the candidate").
-2. Be professional, concise, and helpful in your responses
-3. Answer based ONLY on the information available in the context provided
-4. If information is not available in the context, politely indicate that you don't have that specific information and offer to provide related information that is available
-5. **Tailor your answers to the specific role** you are applying for, highlighting relevant skills and experiences that match the position requirements
-6. When appropriate, mention how your background aligns with the role at {company_name}
-7. Reference specific portfolio projects that demonstrate skills relevant to the {job_title} position (e.g., "In my project X, I...")
-8. Maintain a confident but humble tone - emphasize your capabilities without exaggeration
-9. Use natural, conversational language while maintaining professionalism
-10. Keep responses concise (2-4 paragraphs typically) unless detailed explanation is specifically requested
-11. If asked about salary expectations, real-time internet search results with current market data will be provided to you. Use this data to give an informed, contextual answer about your personal salary expectation based on current market rates and your experience level. Frame it as a reasonable range while remaining open to negotiation.
-12. If asked about availability or other personal preferences, indicate that you'd be happy to discuss those details directly
-
-**Context Usage:**
-- **RESUME section**: Contains your full work experience, education, and core skills
-- **PORTFOLIO section**: Contains specific projects retrieved via semantic search - cite these when they demonstrate relevant experience for the {job_title} role
-- **Real-Time Internet Search Results**: May contain current market salary data for the specific role - use these when provided to give informed answers about compensation expectations
-
-**Tone and Style:**
-- Professional and courteous, but personal (you are speaking for yourself)
-- Knowledgeable about technical details when relevant
-- Enthusiastic about the specific opportunity at {company_name}
-- Clear and well-structured in your explanations
-- **NEVER use em dashes (—) or m-dashes; use commas, periods, or semicolons instead**
-- **NEVER use emojis**
-
-**Example Questions You Should Handle Well:**
-- Questions about specific technical skills and experience
-- Questions about past projects and achievements
-- Questions about education and certifications
-- Questions about work experience and responsibilities
-- Questions about availability for interviews or start dates (general responses)
-- Questions about why you would be a good fit for this specific role
-- Questions about how your experience matches the position requirements
-- Questions about specific portfolio projects relevant to {job_title}
-- Questions about salary expectations (use provided market data when available)
-
-Always represent yourself professionally and accurately, while emphasizing your fit for the {job_title} position at {company_name}."""
+- Questions about portfolio projects
+- Questions about salary expectations (use provided market data when available)"""
 
 
 def get_cover_letter_prompt(max_words: int = 500) -> str:
@@ -205,36 +158,70 @@ def parse_job_context(job_context: str) -> tuple:
 def get_employer_qa_system_prompt(job_context: str = None, job_description: str = None) -> str:
     """
     Get the employer Q&A system prompt with optional job context.
-    
+
+    Builds the prompt from the single EMPLOYER_QA_SYSTEM_PROMPT_TEMPLATE,
+    injecting job-specific blocks only when job context is provided.
+
     Args:
         job_context: String describing the position (e.g., "ML Engineer at DOHE AI")
         job_description: Full job description text
-    
+
     Returns:
         Formatted system prompt
     """
     if job_context:
-        # Extract company and job title from context if possible
-        job_title, company_name = parse_job_context(job_context)
-        if not company_name:
-            company_name = "the company"
-        
-        # Build job description section
+        job_title, company = parse_job_context(job_context)
+        job_title = job_title or "this position"
+        company_name = company or "the company"
+
+        job_description_section = ""
         if job_description and len(job_description) > 50:
             # Truncate long job descriptions
             job_desc_truncated = job_description[:1000] + "..." if len(job_description) > 1000 else job_description
             job_description_section = f"\n\n**Position Details:**\n{job_desc_truncated}"
-        else:
-            job_description_section = ""
-        
-        return EMPLOYER_QA_SYSTEM_PROMPT_WITH_JOB.format(
-            job_context=job_context,
-            job_description_section=job_description_section,
-            company_name=company_name,
-            job_title=job_title
+
+        job_section = f"**Current Application Context:**\n{job_context}{job_description_section}\n"
+        candidacy_guidelines = (
+            f"- **Tailor your answers to the specific role** you are applying for, "
+            f"highlighting relevant skills and experiences that match the position requirements\n"
+            f"- When appropriate, mention how your background aligns with the role at {company_name}\n"
+            f"- Reference specific portfolio projects that demonstrate skills relevant to the {job_title} position "
+            f"(e.g., \"In my project X, I...\")\n"
+        )
+        enthusiasm = f"Enthusiastic about the specific opportunity at {company_name}"
+        portfolio_tail = f" - highlight the ones most relevant to the {job_title} role"
+        example_questions = (
+            EMPLOYER_QA_COMMON_EXAMPLES
+            + "\n- Questions about why you would be a good fit for this specific role"
+            + f"\n- Questions about how your experience matches the {job_title} position requirements"
+            + f"\n- Questions about portfolio projects relevant to {job_title}"
+        )
+        closing = (
+            f"Always represent yourself professionally and accurately, "
+            f"while emphasizing your fit for the {job_title} position at {company_name}."
         )
     else:
-        return EMPLOYER_QA_SYSTEM_PROMPT_BASE
+        job_section = ""
+        candidacy_guidelines = (
+            "- Highlight your relevant strengths, achievements, and experiences that match what the employer is asking about\n"
+            "- Reference specific portfolio projects when they demonstrate relevant skills or experience "
+            "(e.g., \"In my project X, I...\")\n"
+            "- Questions about why you would be a good fit for a particular role\n"
+        )
+        enthusiasm = "Enthusiastic about opportunities but not overly eager"
+        portfolio_tail = ""
+        example_questions = EMPLOYER_QA_COMMON_EXAMPLES
+        closing = "Always represent yourself professionally and accurately."
+
+    return EMPLOYER_QA_SYSTEM_PROMPT_TEMPLATE.format(
+        candidate_name=CANDIDATE_NAME,
+        job_section=job_section,
+        candidacy_guidelines=candidacy_guidelines,
+        portfolio_tail=portfolio_tail,
+        enthusiasm=enthusiasm,
+        example_questions=example_questions,
+        closing=closing,
+    )
 
 
 # Cold Message / Outreach Message Prompt
