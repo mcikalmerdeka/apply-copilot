@@ -1,13 +1,22 @@
 name: Deploy to Hugging Face Space
 
-# Deploys by pushing the repo git history directly to the HF Space remote.
+# Deploys by pushing a single orphan commit (current tree, binaries/data
+# stripped) directly to the HF Space remote's git endpoint.
+#
+# Why an orphan commit instead of pushing main's history?
+# HF's pre-receive hook scans EVERY commit in the push (not just the tip) and
+# rejects raw binary files that aren't stored via Xet/LFS anywhere in that
+# history. Historic non-LFS .faiss blobs made plain history pushes fail even
+# though HEAD is clean. The Space is a deployment target, not a history
+# mirror — it needs the files, not the commits.
+#
+# Other properties:
 # - 1 commit per push (the old wipe-and-reupload script burned ~1 commit per
-#   file, which trips HF's 128 commits/hour repo rate limit)
-# - No destructive wipe: git push --force reconciles the Space (adds, updates,
-#   AND deletes files to match this repo), so a failed run can never leave a
-#   half-emptied Space behind
-# - LFS objects (assets, PDFs) are uploaded automatically with the push since
-#   the Space remote supports Git LFS natively
+#   file, tripping HF's 128 commits/hour repo rate limit)
+# - Force push fully reconciles the Space (adds, updates, AND deletes files),
+#   so a failed run can never leave a half-emptied Space behind
+# - LFS-tracked binaries (assets, PDFs) upload via Xet/LFS automatically;
+#   deploy-scope exclusions (data outputs, run artifacts) are stripped below
 
 on:
   push:
@@ -24,14 +33,36 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Build binary-free deploy commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+
+          SRC=$(git rev-parse --short HEAD)
+          git checkout -q --orphan space-deploy
+
+          # Exclusions (parity with the previous upload_folder ignore list):
+          # data artifacts + any raw binaries that are not LFS-tracked
+          # (.faiss vector stores, .pkl model files, etc.). Files NOT removed
+          # here are real content needed by the Space, e.g. assets/*.png
+          # (Space logo, LFS-tracked -> uploaded via Xet/LFS with the push).
+          git rm -q -r --cached --ignore-unmatch data/vector_stores data/resumes data/output
+          find . -path ./.git -prune -o -type f \( \
+            -name '*.faiss' -o -name '*.pkl' -o -name '*.pickle' \
+            -o -name '*.bin' -o -name '*.h5' -o -name '*.pt' -o -name '*.pth' \
+            -o -name '*.onnx' -o -name '*.joblib' \
+          \) -print0 | xargs -0 --no-run-if-empty git rm -q --cached
+
+          git commit -q -m "Deploy from github.com/mcikalmerdeka/personalized-CL-generation@${SRC}"
+          echo "Deploy commit: $(git rev-parse --short HEAD) ($(git ls-files | wc -l) files)"
+          echo "Raw binaries remaining: $(git ls-files | grep -icE '\.(faiss|pkl|pickle|bin|h5|pt|pth|onnx|joblib)$' || true)"
+
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SPACE_REPO: mcikalmerdeka/apply-copilot
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@users.noreply.github.com"
           git lfs install
           git remote add space "https://user:${HF_TOKEN}@huggingface.co/spaces/${SPACE_REPO}"
-          git push space main --force
+          git push --force space HEAD:main
           echo "Deployed to https://huggingface.co/spaces/${SPACE_REPO}"
