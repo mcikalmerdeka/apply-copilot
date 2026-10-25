@@ -3,17 +3,17 @@ name = "apply-copilot"
 version = "0.1.0"
 description = "AI job-application assistant: cover letters, employer Q&A chat, and cold outreach powered by resume injection + portfolio RAG"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "faiss-cpu>=1.13.2",
     "gradio>=6.5.1",
+    "langchain>=1.2.10",
     "langchain-community>=0.4.1",
-    "langchain-core>=1.2.8",
+    "langchain-core>=1.2.16",
+    "langchain-openai>=1.1.7",
+    "openai>=2.24.0",
     "pypdf>=6.6.2",
     "python-dotenv>=1.2.1",
     "reportlab>=4.4.9",
-    "langchain-openai>=1.1.7",
-    "langchain>=1.2.10",
-    "openai>=2.16.0",
     "tavily-python>=0.7.24",
 ]
