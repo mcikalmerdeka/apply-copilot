@@ -36,11 +36,6 @@ class EmployerQAChatbot:
 
         logger.info(f"Initialized EmployerQAChatbot with LLM model: {llm_model}")
 
-    def clear_history(self) -> None:
-        """Clear the chat session and rotate the LLM session ID (stable per conversation)."""
-        self.llm.rotate_session()
-        logger.info("Chat history cleared")
-
     def set_job_context(self, job_context: str, job_description: str = "") -> None:
         """
         Set job context for more contextual answers.
@@ -58,11 +53,6 @@ class EmployerQAChatbot:
         self.job_context = None
         self.job_description = None
         logger.info("Job context cleared")
-    
-    def clear_history(self) -> None:
-        """Clear the chat session and rotate the OpenCode Go session ID (stable per conversation)."""
-        self.llm.rotate_session()
-        logger.info("Chat history cleared")
     
     def _extract_job_info(self) -> tuple:
         """Extract job title and company name from job_context if available."""

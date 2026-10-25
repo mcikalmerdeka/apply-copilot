@@ -152,8 +152,7 @@ class ApplyCopilotUI:
         try:
             self.generator.vector_store_manager.clear_vector_store()
             
-            # Clear chatbot history
-            self.chatbot.clear_history()
+            # Clear chatbot job context
             self.chatbot.clear_job_context()
             
             # Clear job details
@@ -561,7 +560,7 @@ class ApplyCopilotUI:
                     return "", history
             
             def clear_chat():
-                self.chatbot.clear_history()
+                # Chat history lives in the Gradio component, so clearing it is enough.
                 return []
             
             def update_qa_context():

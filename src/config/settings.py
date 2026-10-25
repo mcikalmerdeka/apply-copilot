@@ -17,7 +17,8 @@ for directory in [DATA_DIR, RESUMES_DIR, COVER_LETTER_EXAMPLES_DIR, VECTOR_STORE
 
 # Model settings
 EMBEDDING_MODEL = "text-embedding-3-small"
-LLM_MODEL = "glm-5.3-flash"  # OpenCode OpenAI-compatible endpoint
+LLM_MODEL = "gpt-6-luna"  # OpenAI reasoning model
+LLM_REASONING_EFFORT = "low"  # gpt-6-luna: none | low | medium | high | xhigh | max
 
 # Vector store settings - Optimized for Portfolio RAG
 CHUNK_SIZE = 800  # Increased for larger semantic units in portfolio

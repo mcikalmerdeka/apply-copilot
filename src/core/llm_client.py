@@ -1,73 +1,62 @@
 """
 Shared LLM client for ApplyCopilot.
 
-Centralizes OpenCode Go client construction (single source for base URL,
-auth, session headers) and the chat-completion call pattern used by the
-cover letter generator and the employer Q&A chatbot.
+Centralizes OpenAI client construction and the chat-completion call pattern
+used by the cover letter generator and the employer Q&A chatbot.
 
-OpenCode Go requires a stable session ID in the `x-opencode-session` header
-per conversation (enforced since Sep 2026) and expects clients to identify
-themselves with their own User-Agent.
-See https://opencode.ai/docs/go/#where-can-i-use-it
+Text generation runs on GPT-6 Luna with low reasoning effort. Reasoning models
+do not accept sampling controls such as ``temperature`` when reasoning is
+enabled, so the request intentionally omits them.
+See https://developers.openai.com/api/docs/models/gpt-6-luna
 """
 
 import os
-import uuid
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
 from src.config.logging_config import setup_logger
-from src.config.settings import LLM_MODEL
+from src.config.settings import LLM_MODEL, LLM_REASONING_EFFORT
 
 load_dotenv()
 logger = setup_logger(__name__)
 
-# OpenCode Go endpoint settings
-LLM_BASE_URL = "https://opencode.ai/zen/go/v1"
-LLM_USER_AGENT = "apply-copilot/1.0"
-LLM_TEMPERATURE = 0.6
-
 
 class LLMClient:
-    """OpenCode Go LLM client with a stable per-conversation session ID."""
+    """OpenAI chat client for GPT-6 Luna with configurable reasoning effort."""
 
-    def __init__(self, llm_model: str = LLM_MODEL):
+    def __init__(self, llm_model: str = LLM_MODEL,
+                 reasoning_effort: str = LLM_REASONING_EFFORT):
         """
         Initialize the LLM client.
 
         Args:
-            llm_model: LLM model name (OpenCode OpenAI-compatible endpoint)
+            llm_model: OpenAI model name
+            reasoning_effort: Reasoning effort passed to the model
         """
         self.model = llm_model
-        self.session_id = str(uuid.uuid4())
+        self.reasoning_effort = reasoning_effort
         self.client = self._create_openai_client()
-        logger.info(f"Initialized LLMClient with model: {llm_model}")
-
-    def _create_openai_client(self) -> OpenAI:
-        """Create the OpenAI-compatible client pointed at the OpenCode Go endpoint."""
-        return OpenAI(
-            base_url=LLM_BASE_URL,
-            api_key=os.getenv("OPENCODE_API_KEY"),
-            default_headers={
-                "x-opencode-session": self.session_id,
-                "User-Agent": LLM_USER_AGENT,
-            },
+        logger.info(
+            f"Initialized LLMClient with model: {llm_model} "
+            f"(reasoning effort: {reasoning_effort})"
         )
 
-    def rotate_session(self) -> None:
-        """Start a new conversation by rotating the session ID and rebuilding the client."""
-        self.session_id = str(uuid.uuid4())
-        self.client = self._create_openai_client()
-        logger.info("LLM session rotated")
+    def _create_openai_client(self) -> OpenAI:
+        """Create an OpenAI client, failing early when the API key is missing."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is not set. Add it to your .env file or environment."
+            )
+        return OpenAI(api_key=api_key)
 
-    def complete(self, messages: list, temperature: float = LLM_TEMPERATURE) -> str:
+    def complete(self, messages: list) -> str:
         """
         Run a chat completion and return the assistant message content.
 
         Args:
             messages: OpenAI-format message list ([{"role": ..., "content": ...}, ...])
-            temperature: Sampling temperature
 
         Returns:
             The assistant's reply text
@@ -78,6 +67,6 @@ class LLMClient:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=temperature,
+            reasoning_effort=self.reasoning_effort,
         )
         return response.choices[0].message.content
